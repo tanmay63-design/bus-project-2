@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route Map — Salt Lake Depot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .route-editor {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Secondary context bar — org + depot (tokens only; breadcrumb reused) */
+    .map-subbar {
+      flex-shrink: 0;
+      background: var(--surface-background);
+      border-bottom: 1px solid var(--border-default);
+      display: flex;
+      align-items: center;
+      padding: var(--space-24);
+    }
+    .map-subbar .breadcrumb-item i { color: var(--text-tertiary); }
+
+    /* Left panel */
+    .route-panel {
+      width: 300px;
+      flex-shrink: 0;
+      background: var(--surface-card);
+      border-right: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-24);
+      overflow-y: auto;
+    }
+
+    .route-panel-back {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+      text-decoration: none;
+      margin-bottom: var(--space-24);
+      transition: color 0.15s;
+    }
+    .route-panel-back:hover {
+      color: var(--text-primary);
+    }
+
+    /* Full-bleed divider under "Back to routes" (aligns with the context bar);
+       24px gap below it before the title. Negative margins cancel the 24px
+       panel padding so the line spans edge to edge. */
+    .route-panel-divider {
+      height: 1px;
+      border: none;
+      background: var(--border-default);
+      margin: 0 calc(-1 * var(--space-24)) var(--space-24);
+    }
+
+    .route-panel-title {
+      font-size: 18px;
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-24);
+    }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      margin: var(--space-24) 0;
+    }
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-default);
+    }
+    .or-divider span {
+      font-size: var(--font-small);
+      color: var(--text-tertiary);
+      font-weight: var(--weight-medium);
+    }
+
+    /* Map area — column so the context bar sits only above the map */
+    .route-map-area {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-canvas {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Brand cell in the top bar — spans the panel's 300px column and carries
+       a right border so the vertical divider runs from the very top of the
+       header down through the panel (one continuous line). */
+    .top-bar-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      align-self: stretch;
+      width: 300px;
+      margin-left: calc(-1 * var(--space-24));
+      padding-left: var(--space-24);
+      border-right: 1px solid var(--border-default);
+    }
+  </style>
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="top-bar">
+    <!-- Logo -->
+    <div class="top-bar-brand">
+      <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+        <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+      </div>
+      <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+        Transit Console
+      </div>
+    </div>
+
+    <div style="flex: 1;"></div>
+
+    <!-- Right side actions -->
+    <button class="btn-icon" title="Help">
+      <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+    </button>
+
+    <button class="btn-icon" title="Settings" aria-label="Settings">
+      <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+    </button>
+  </header>
+
+  <div class="route-editor">
+
+    <!-- Left panel -->
+    <div class="route-panel">
+      <a href="flow-b-3-routes-table.html" class="route-panel-back">
+        <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+        Back to routes
+      </a>
+
+      <hr class="route-panel-divider">
+
+      <h2 class="route-panel-title">Route Creation</h2>
+
+      <!-- Select route — custom dropdown (our own .ds-action-dropdown menu, not a native select) -->
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label">Select existing route</label>
+        <div style="position: relative;">
+          <button type="button" class="select" id="routeTrigger" aria-haspopup="listbox" aria-expanded="false"
+                  style="text-align: left; cursor: pointer; color: var(--text-tertiary);">
+            <span id="routeLabel">Select a route...</span>
+          </button>
+          <div class="ds-action-dropdown" id="routeMenu"
+               style="position: absolute; top: calc(100% + var(--space-4)); left: 0; width: 100%; z-index: 700; display: none; max-height: 280px; overflow-y: auto;">
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 22 — Downtown Loop"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 22 — Downtown Loop</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 45A — Airport Express"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 45A — Airport Express</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 78 — City Center"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 78 — City Center</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 12B — North Shuttle"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 12B — North Shuttle</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 56 — Lake Gardens"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 56 — Lake Gardens</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 33 — Tech Park Shuttle"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 33 — Tech Park Shuttle</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 91 — Hospital Line"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 91 — Hospital Line</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 67A — Southern Express"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 67A — Southern Express</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 15 — University Circuit"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 15 — University Circuit</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 88 — Evening Special"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 88 — Evening Special</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 102 — Riverside"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 102 — Riverside</button>
+            <button type="button" class="ds-action-dropdown-item" data-route="Route 29 — Mall Connector"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 29 — Mall Connector</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Or divider -->
+      <div class="or-divider">
+        <span>Or</span>
+      </div>
+
+      <!-- Create New Route button -->
+      <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="openCreateRoute()">
+        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+        Create New Route
+      </button>
+    </div>
+
+    <!-- Map -->
+    <div class="route-map-area">
+      <!-- Secondary context bar: Organization › Depot (above the map only) -->
+      <div class="map-subbar">
+        <div class="breadcrumb">
+          <div class="breadcrumb-item">
+            <i data-lucide="building-2" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-link">Kolkata Metro Bus Services</span>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <i data-lucide="warehouse" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-current">Salt Lake Depot</span>
+          </div>
+        </div>
+      </div>
+      <div class="map-canvas">
+        <div id="map"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       CREATE NEW ROUTE — details modal (reuses .modal component)
+       ============================================================ -->
+  <div class="modal-overlay" id="createRouteModal">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header" style="flex-direction: column; align-items: stretch; position: relative;">
+        <h2 class="modal-title">Create New Route</h2>
+        <p class="text-small" style="margin-top: var(--space-4);">Set up the route details before adding stops.</p>
+        <button class="btn-icon" onclick="closeCreateRoute()" aria-label="Close"
+                style="position: absolute; top: var(--space-16); right: var(--space-16);">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="return false;" autocomplete="off">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="cr-name">Route name</label>
+            <input type="text" id="cr-name" class="input" placeholder="e.g., Route 12" />
+            <span class="form-helper" id="cr-h-name">A short, recognizable name for this route.</span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCreateRoute()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateRoute()">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    lucide.createIcons();
+
+    const map = L.map('map').setView([22.5726, 88.3639], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    /* Custom "Select existing route" dropdown (our own .ds-action-dropdown) */
+    const routeTrigger = document.getElementById('routeTrigger');
+    const routeMenu = document.getElementById('routeMenu');
+    const routeLabel = document.getElementById('routeLabel');
+
+    routeTrigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const open = routeMenu.style.display === 'block';
+      routeMenu.style.display = open ? 'none' : 'block';
+      routeTrigger.setAttribute('aria-expanded', String(!open));
+    });
+
+    routeMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    routeMenu.querySelectorAll('[data-route]').forEach(function (item) {
+      item.addEventListener('click', function () {
+        routeLabel.textContent = item.dataset.route;
+        routeTrigger.style.color = 'var(--text-primary)';
+        routeMenu.querySelectorAll('.ds-action-dropdown-item').forEach(function (x) {
+          x.classList.remove('active');
+          x.querySelector('.rc-check').innerHTML = '';
+        });
+        item.classList.add('active');
+        item.querySelector('.rc-check').innerHTML = '<i data-lucide="check" style="width:16px;height:16px;"></i>';
+        lucide.createIcons();
+        routeMenu.style.display = 'none';
+        routeTrigger.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    document.addEventListener('click', function () {
+      if (routeMenu.style.display === 'block') {
+        routeMenu.style.display = 'none';
+        routeTrigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    /* ========================================================
+       CREATE NEW ROUTE modal — draft-first (nothing saved yet)
+       ======================================================== */
+    const createRouteModal = document.getElementById('createRouteModal');
+
+    function openCreateRoute() {
+      createRouteModal.classList.add('open');
+      lucide.createIcons();
+      document.getElementById('cr-name').focus();
+    }
+    function closeCreateRoute() {
+      createRouteModal.classList.remove('open');
+    }
+    createRouteModal.addEventListener('click', function (e) {
+      if (e.target === createRouteModal) closeCreateRoute();
+    });
+
+    function crFieldError(inputId, helperId, on, msg, base) {
+      document.getElementById(inputId).classList.toggle('error', on);
+      const h = document.getElementById(helperId);
+      h.classList.toggle('error', on);
+      h.textContent = on ? msg : base;
+    }
+
+    function submitCreateRoute() {
+      const name = document.getElementById('cr-name').value.trim();
+
+      if (!name) {
+        crFieldError('cr-name', 'cr-h-name', true, 'Route name is required.');
+        return;
+      }
+      crFieldError('cr-name', 'cr-h-name', false, '', 'A short, recognizable name for this route.');
+
+      /* Nothing is persisted here — hand the route name to the add-stops
+         workspace (route-build-mode.html) via sessionStorage. */
+      sessionStorage.setItem('routeDraft', JSON.stringify({ name: name }));
+      window.location.href = 'route-build-mode.html';
+    }
+  </script>
+</body>
+</html>

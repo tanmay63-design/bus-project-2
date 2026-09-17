@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design System - Transit Frequency Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+  <style>
+    .ds-section {
+      margin-bottom: var(--space-64);
+    }
+    .ds-swatch {
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      padding: var(--space-16);
+      border-radius: var(--radius-card);
+      border: 1px solid var(--border-default);
+      margin-bottom: var(--space-8);
+    }
+    .ds-color-box {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--radius-button);
+      border: 1px solid var(--border-default);
+      flex-shrink: 0;
+    }
+    .ds-spacing-demo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-16);
+      margin-bottom: var(--space-8);
+    }
+    .ds-spacing-box {
+      background-color: var(--primary);
+      opacity: 0.2;
+    }
+    .component-demo {
+      padding: var(--space-24);
+      background-color: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-card);
+      margin-bottom: var(--space-16);
+    }
+    .demo-row {
+      display: flex;
+      gap: var(--space-16);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+  </style>
+</head>
+<body style="background-color: var(--surface-background); padding: var(--space-48);">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: var(--space-64);">
+      <div style="width: 64px; height: 64px; background-color: var(--primary); border-radius: 12px; margin: 0 auto var(--space-24); display: flex; align-items: center; justify-content: center;">
+        <i data-lucide="bus" style="width: 32px; height: 32px; color: white;"></i>
+      </div>
+      <h1 class="text-display" style="margin-bottom: var(--space-16);">Transit Frequency Console</h1>
+      <h2 class="text-h2 text-secondary" style="margin-bottom: var(--space-8);">Design System</h2>
+      <p class="text-body text-secondary" style="max-width: 600px; margin: 0 auto;">
+        A professional B2B SaaS design system for city-level public transport operators. 
+        Built on an 8px grid with a calm, dispatcher-grade information density. Fully responsive across all device sizes.
+      </p>
+    </div>
+
+    <!-- Color Palette -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Color Palette</h2>
+      <p class="text-body text-secondary mb-32">
+        Professional, transit-operations feel with a neutral-forward palette and one calm primary color.
+      </p>
+
+      <h3 class="text-h3 mb-16">Primary</h3>
+      <div class="ds-swatch">
+        <div class="ds-color-box" style="background-color: var(--primary);"></div>
+        <div>
+          <div class="text-h3">Primary</div>
+          <code style="font-size: var(--font-small); color: var(--text-secondary);">#1A56DB</code>
+          <div class="text-small text-tertiary">Actions, active states, focus</div>
+        </div>
+      </div>
+      <div class="ds-swatch">
+        <div class="ds-color-box" style="background-color: var(--primary-hover);"></div>
+        <div>
+          <div class="text-h3">Primary Hover</div>
+          <code style="font-size: var(--font-small); color: var(--text-secondary);">#1641A3</code>
+          <div class="text-small text-tertiary">Hover states for primary actions</div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Surface & Background</h3>
+      <div class="ds-swatch">
+        <div class="ds-color-box" style="background-color: var(--surface-background); border: 2px solid var(--border-default);"></div>
+        <div>
+          <div class="text-h3">Surface Background</div>
+          <code style="font-size: var(--font-small); color: var(--text-secondary);">#F7F8FA</code>
+          <div class="text-small text-tertiary">Main page background</div>
+        </div>
+      </div>
+      <div class="ds-swatch">
+        <div class="ds-color-box" style="background-color: var(--surface-card);"></div>
+        <div>
+          <div class="text-h3">Surface Card</div>
+          <code style="font-size: var(--font-small); color: var(--text-secondary);">#FFFFFF</code>
+          <div class="text-small text-tertiary">Cards, modals, elevated surfaces</div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Text</h3>
+      <div class="ds-swatch">
+        <div class="ds-color-box" style="background-color: var(--text-primary);"></div>
+        <div>
+          <div class="text-h3">Text Primary</div>
+          <code style="font-size: var(--font-small); color: var(--text-secondary);">#1A1D23</code>
+          <div class="text-small text-tertiary">Main body text, headings</div>
+        </div>
+      </div>
+      <div class="ds-swatch">
+        <div class="ds-color-box" style="background-color: var(--text-secondary);"></div>
+        <div>
+          <div class="text-h3">Text Secondary</div>
+          <code style="font-size: var(--font-small); color: var(--text-secondary);">#5B6470</code>
+          <div class="text-small text-tertiary">Supporting text, labels</div>
+        </div>
+      </div>
+      <div class="ds-swatch">
+        <div class="ds-color-box" style="background-color: var(--text-tertiary);"></div>
+        <div>
+          <div class="text-h3">Text Tertiary</div>
+          <code style="font-size: var(--font-small); color: var(--text-secondary);">#9AA3AF</code>
+          <div class="text-small text-tertiary">Placeholder, disabled states</div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Semantic Colors</h3>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-8);">
+        <div class="ds-swatch">
+          <div class="ds-color-box" style="background-color: var(--success);"></div>
+          <div>
+            <div class="text-h3">Success</div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">#0E9F6E</code>
+          </div>
+        </div>
+        <div class="ds-swatch">
+          <div class="ds-color-box" style="background-color: var(--warning);"></div>
+          <div>
+            <div class="text-h3">Warning</div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">#D97706</code>
+          </div>
+        </div>
+        <div class="ds-swatch">
+          <div class="ds-color-box" style="background-color: var(--danger);"></div>
+          <div>
+            <div class="text-h3">Danger</div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">#E02424</code>
+          </div>
+        </div>
+        <div class="ds-swatch">
+          <div class="ds-color-box" style="background-color: var(--info);"></div>
+          <div>
+            <div class="text-h3">Info</div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">#1A56DB</code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typography -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Typography</h2>
+      <p class="text-body text-secondary mb-32">
+        Inter font family. Line-height ~1.5 for body text. Font scale based on operational clarity.
+      </p>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <div class="text-display">Display 28/600 — Page titles and hero headings</div>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">28px / 600 weight</code>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <div class="text-title">Title 26/600 — Large page headings</div>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">26px / 600 weight</code>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <h1 class="text-h1">Heading 1 24/600 — Primary section headings</h1>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">24px / 600 weight</code>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <h2 class="text-h2">Heading 2 20/600 — Subsection headings</h2>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">20px / 600 weight</code>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <h3 class="text-h3">Heading 3 16/600 — Component titles</h3>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">16px / 600 weight</code>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <p class="text-body">Body 14/400 — Default body text for content and UI</p>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">14px / 400 weight</code>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <p class="text-small">Small 14/400 — Helper text, secondary information</p>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">14px / 400 weight</code>
+        </div>
+      </div>
+
+      <div class="card mb-16">
+        <div class="card-body">
+          <p class="text-caption">CAPTION 14/500 — LABELS, METADATA</p>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">14px / 500 weight / uppercase</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- Spacing -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Spacing & Grid</h2>
+      <p class="text-body text-secondary mb-32">
+        Strict 8px base grid. All spacing, padding, and gaps must be multiples of 8 (use 4 only for tight icon-label pairs).
+      </p>
+
+      <div class="ds-spacing-demo">
+        <div class="ds-spacing-box" style="width: 4px; height: 32px;"></div>
+        <code style="font-size: var(--font-small); width: 80px;">4px</code>
+        <span class="text-small text-secondary">Tight pairs only</span>
+      </div>
+      <div class="ds-spacing-demo">
+        <div class="ds-spacing-box" style="width: 8px; height: 32px;"></div>
+        <code style="font-size: var(--font-small); width: 80px;">8px</code>
+        <span class="text-small text-secondary">Base unit</span>
+      </div>
+      <div class="ds-spacing-demo">
+        <div class="ds-spacing-box" style="width: 16px; height: 32px;"></div>
+        <code style="font-size: var(--font-small); width: 80px;">16px</code>
+        <span class="text-small text-secondary">Small gaps</span>
+      </div>
+      <div class="ds-spacing-demo">
+        <div class="ds-spacing-box" style="width: 24px; height: 32px;"></div>
+        <code style="font-size: var(--font-small); width: 80px;">24px</code>
+        <span class="text-small text-secondary">Component spacing</span>
+      </div>
+      <div class="ds-spacing-demo">
+        <div class="ds-spacing-box" style="width: 32px; height: 32px;"></div>
+        <code style="font-size: var(--font-small); width: 80px;">32px</code>
+        <span class="text-small text-secondary">Section spacing</span>
+      </div>
+      <div class="ds-spacing-demo">
+        <div class="ds-spacing-box" style="width: 48px; height: 32px;"></div>
+        <code style="font-size: var(--font-small); width: 80px;">48px</code>
+        <span class="text-small text-secondary">Large sections</span>
+      </div>
+      <div class="ds-spacing-demo">
+        <div class="ds-spacing-box" style="width: 64px; height: 32px;"></div>
+        <code style="font-size: var(--font-small); width: 80px;">64px</code>
+        <span class="text-small text-secondary">Page sections</span>
+      </div>
+    </section>
+
+    <!-- Responsive Breakpoints -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Responsive Breakpoints</h2>
+      <p class="text-body text-secondary mb-32">
+        Fully responsive design that adapts seamlessly across all device sizes with strategic breakpoints.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-16);">
+        <div class="card">
+          <div class="card-body">
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 40px; height: 32px; background: var(--primary); opacity: 0.2; border-radius: 4px;"></div>
+              <h3 class="text-h3">Desktop</h3>
+            </div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">> 1280px</code>
+            <p class="text-small text-secondary mt-8">
+              Full navigation rail, maximum information density, multi-column layouts
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 32px; height: 28px; background: var(--primary); opacity: 0.2; border-radius: 4px;"></div>
+              <h3 class="text-h3">Tablet (Large)</h3>
+            </div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">1024px - 1280px</code>
+            <p class="text-small text-secondary mt-8">
+              Narrower navigation, adjusted spacing, tables remain functional
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 24px; height: 32px; background: var(--primary); opacity: 0.2; border-radius: 4px;"></div>
+              <h3 class="text-h3">Tablet / Mobile</h3>
+            </div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">768px - 1024px</code>
+            <p class="text-small text-secondary mt-8">
+              Collapsible navigation drawer, single-column layouts, touch-optimized
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 16px; height: 28px; background: var(--primary); opacity: 0.2; border-radius: 4px;"></div>
+              <h3 class="text-h3">Mobile</h3>
+            </div>
+            <code style="font-size: var(--font-small); color: var(--text-secondary);">< 768px</code>
+            <p class="text-small text-secondary mt-8">
+              Full-width cards, stacked layouts, horizontal scrolling tables
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Elevation & Radius -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Elevation & Border Radius</h2>
+      
+      <h3 class="text-h3 mb-16">Shadows</h3>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-24); margin-bottom: var(--space-32);">
+        <div class="card">
+          <div class="card-body" style="text-align: center;">
+            <div class="text-h3 mb-8">Card Shadow</div>
+            <code style="font-size: var(--font-small); color: var(--text-tertiary);">0 1px 2px rgba(16,24,40,0.06)</code>
+            <p class="text-small text-secondary mt-8">Subtle elevation for cards</p>
+          </div>
+        </div>
+        <div style="background: var(--surface-card); border-radius: var(--radius-card); padding: var(--space-24); text-align: center; box-shadow: var(--shadow-modal);">
+          <div class="text-h3 mb-8">Modal Shadow</div>
+          <code style="font-size: var(--font-small); color: var(--text-tertiary);">0 8px 24px rgba(16,24,40,0.12)</code>
+          <p class="text-small text-secondary mt-8">Elevated modals & popovers</p>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16">Border Radius</h3>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-16);">
+        <div class="card">
+          <div class="card-body" style="text-align: center;">
+            <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 6px; margin: 0 auto var(--space-8);"></div>
+            <code style="font-size: var(--font-small);">6px</code>
+            <p class="text-small text-tertiary">Buttons</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body" style="text-align: center;">
+            <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 8px; margin: 0 auto var(--space-8);"></div>
+            <code style="font-size: var(--font-small);">8px</code>
+            <p class="text-small text-tertiary">Cards</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body" style="text-align: center;">
+            <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 12px; margin: 0 auto var(--space-8);"></div>
+            <code style="font-size: var(--font-small);">12px</code>
+            <p class="text-small text-tertiary">Modals</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body" style="text-align: center;">
+            <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 50%; margin: 0 auto var(--space-8);"></div>
+            <code style="font-size: var(--font-small);">50%</code>
+            <p class="text-small text-tertiary">Avatars</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Buttons</h2>
+      
+      <h3 class="text-h3 mb-16">Primary Button States</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-24);">
+          <div>
+            <div class="text-small text-secondary mb-8">Default</div>
+            <button class="btn btn-primary">Primary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Hover</div>
+            <button class="btn btn-primary" style="background-color: var(--primary-hover);">Primary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Active/Pressed</div>
+            <button class="btn btn-primary" style="transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">Primary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Focused</div>
+            <button class="btn btn-primary" style="outline: 2px solid var(--primary); outline-offset: 2px; box-shadow: none;">Primary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Disabled</div>
+            <button class="btn btn-primary" disabled>Primary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Loading</div>
+            <button class="btn btn-primary" disabled>
+              <span style="display: inline-block; animation: spin 1s linear infinite;">⟳</span>
+              Loading...
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Secondary Button States</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-24);">
+          <div>
+            <div class="text-small text-secondary mb-8">Default</div>
+            <button class="btn btn-secondary">Secondary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Hover</div>
+            <button class="btn btn-secondary" style="background-color: var(--surface-background);">Secondary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Active/Pressed</div>
+            <button class="btn btn-secondary" style="transform: translateY(1px); background-color: var(--surface-background);">Secondary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Focused</div>
+            <button class="btn btn-secondary" style="outline: 2px solid var(--primary); outline-offset: 2px; box-shadow: none;">Secondary Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Disabled</div>
+            <button class="btn btn-secondary" disabled>Secondary Button</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Ghost Button States</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-24);">
+          <div>
+            <div class="text-small text-secondary mb-8">Default</div>
+            <button class="btn btn-ghost">Ghost Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Hover</div>
+            <button class="btn btn-ghost" style="background-color: var(--surface-background);">Ghost Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Active/Pressed</div>
+            <button class="btn btn-ghost" style="transform: translateY(1px); background-color: var(--surface-background);">Ghost Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Focused</div>
+            <button class="btn btn-ghost" style="outline: 2px solid var(--primary); outline-offset: 2px; box-shadow: none;">Ghost Button</button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Disabled</div>
+            <button class="btn btn-ghost" disabled>Ghost Button</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Icon Button States</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-24);">
+          <div>
+            <div class="text-small text-secondary mb-8">Default</div>
+            <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Hover</div>
+            <button class="btn-icon" style="background-color: var(--surface-background);"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Active</div>
+            <button class="btn-icon" style="transform: translateY(1px); background-color: var(--surface-background);"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Focused</div>
+            <button class="btn-icon" style="outline: 2px solid var(--primary); outline-offset: 2px; box-shadow: none;"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Disabled</div>
+            <button class="btn-icon" disabled><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Button Sizes & Variations</h3>
+      <div class="component-demo">
+        <div class="demo-row">
+          <button class="btn btn-primary">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            Add Depot
+          </button>
+          <button class="btn btn-secondary">
+            <i data-lucide="arrow-down" style="width: 16px; height: 16px;"></i>
+            Export
+          </button>
+          <button class="btn btn-primary w-full" style="max-width: 300px;">Full Width Button</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table Link -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Table Link</h2>
+      <p class="text-body text-secondary mb-32">Inline navigational link used in table cells. Appears as normal text by default; on hover it turns primary, gains an underline, and reveals a top-right arrow icon.</p>
+
+      <div class="component-demo">
+        <div style="display: flex; flex-direction: column; gap: var(--space-24);">
+
+          <div>
+            <div class="text-small text-secondary mb-16">Default (no hover)</div>
+            <a href="#" class="table-link">Salt Lake Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+          </div>
+
+          <div>
+            <div class="text-small text-secondary mb-16">Hover state (forced)</div>
+            <a href="#" class="table-link" style="color: var(--primary); text-decoration: underline; text-underline-offset: 3px;">
+              Salt Lake Depot <i data-lucide="arrow-up-right" style="width: 13px; height: 13px; opacity: 1;"></i>
+            </a>
+          </div>
+
+          <div>
+            <div class="text-small text-secondary mb-16">In context (table cell)</div>
+            <div class="table-container" style="max-width: 480px;">
+              <table class="table">
+                <thead>
+                  <tr><th>Depot name</th><th>Routes</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><a href="#" class="table-link">Salt Lake Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a></td>
+                    <td>12 routes</td>
+                    <td><span class="badge badge-success">Active</span></td>
+                  </tr>
+                  <tr>
+                    <td><a href="#" class="table-link">Garia Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a></td>
+                    <td>8 routes</td>
+                    <td><span class="badge badge-success">Active</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card mt-24">
+        <div class="card-body">
+          <div class="text-h3 mb-16">Specs</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-16);">
+            <div><code class="text-small">class: table-link</code></div>
+            <div><code class="text-small">default color: var(--text-primary)</code></div>
+            <div><code class="text-small">hover color: var(--primary)</code></div>
+            <div><code class="text-small">hover: underline, offset 3px</code></div>
+            <div><code class="text-small">icon class: table-link-arrow</code></div>
+            <div><code class="text-small">icon: arrow-up-right, 13×13px</code></div>
+            <div><code class="text-small">icon: hidden by default, slides in on hover</code></div>
+            <div><code class="text-small">font-weight: var(--weight-medium)</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dropdown Menu -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Dropdown Menu</h2>
+      <p class="text-body text-secondary mb-32">Contextual action menus triggered by a button. Available in three variants: no icon, icon left, and icon right.</p>
+
+      <style>
+        .ds-action-dropdown {
+          display: block;
+          position: relative;
+          background: var(--surface-card);
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-card);
+          box-shadow: var(--shadow-modal);
+          min-width: 200px;
+          overflow: hidden;
+        }
+        .ds-action-dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: var(--space-12);
+          padding: 10px 14px;
+          font-family: var(--font-family);
+          font-size: var(--font-body);
+          line-height: 20px;
+          color: var(--text-primary);
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+          cursor: pointer;
+          transition: background var(--transition-fast);
+        }
+        .ds-action-dropdown-item:hover {
+          background: var(--surface-background);
+        }
+        .ds-action-dropdown-item.danger {
+          color: var(--danger);
+        }
+        .ds-action-dropdown-item.danger:hover {
+          background: #fff5f5;
+        }
+      </style>
+
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-32); align-items: start;">
+
+          <!-- Without icon -->
+          <div>
+            <div class="text-small text-secondary mb-16">Without icon</div>
+            <div class="ds-action-dropdown">
+              <button class="ds-action-dropdown-item">Edit depot</button>
+              <button class="ds-action-dropdown-item danger">Delete depot</button>
+            </div>
+            <code style="display:block; margin-top: var(--space-12); font-size: var(--font-small); color: var(--text-tertiary);">No icon</code>
+          </div>
+
+          <!-- Icon left -->
+          <div>
+            <div class="text-small text-secondary mb-16">Icon left</div>
+            <div class="ds-action-dropdown">
+              <button class="ds-action-dropdown-item"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+              <button class="ds-action-dropdown-item danger"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+            </div>
+            <code style="display:block; margin-top: var(--space-12); font-size: var(--font-small); color: var(--text-tertiary);">Icon on left</code>
+          </div>
+
+          <!-- Icon right -->
+          <div>
+            <div class="text-small text-secondary mb-16">Icon right</div>
+            <div class="ds-action-dropdown">
+              <button class="ds-action-dropdown-item" style="justify-content: space-between;">Edit depot <i data-lucide="pencil" style="width: 16px; height: 16px;"></i></button>
+              <button class="ds-action-dropdown-item danger" style="justify-content: space-between;">Delete depot <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
+            </div>
+            <code style="display:block; margin-top: var(--space-12); font-size: var(--font-small); color: var(--text-tertiary);">Icon on right</code>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Specs -->
+      <div class="card mt-24">
+        <div class="card-body">
+          <div class="text-h3 mb-16">Specs</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-16);">
+            <div><code class="text-small">min-width: 200px</code></div>
+            <div><code class="text-small">padding: 10px 14px</code></div>
+            <div><code class="text-small">font-size: 14px (var(--font-body))</code></div>
+            <div><code class="text-small">border-radius: var(--radius-card) — 8px</code></div>
+            <div><code class="text-small">border: 1px solid var(--border-default)</code></div>
+            <div><code class="text-small">box-shadow: var(--shadow-modal)</code></div>
+            <div><code class="text-small">icon gap: var(--space-12) — 12px</code></div>
+            <div><code class="text-small">danger color: var(--danger) — #E02424</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <style>
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
+
+    <!-- Form Elements -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Form Elements</h2>
+      
+      <h3 class="text-h3 mb-16">Text Input States</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-24);">
+          <div>
+            <div class="text-small text-secondary mb-8">Default (Empty)</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input" placeholder="e.g., Salt Lake Depot" />
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Filled</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input" value="Salt Lake Depot" />
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Focused</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input" value="Salt Lake Depot" style="box-shadow: inset 0 0 0 1px var(--primary);" />
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Hover</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input" placeholder="e.g., Salt Lake Depot" style="box-shadow: inset 0 0 0 1px var(--text-secondary);" />
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Disabled</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input" value="Salt Lake Depot" disabled />
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Error</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input error" value="Invalid depot name" style="box-shadow: inset 0 0 0 1px var(--danger);" />
+              <span class="form-helper" style="color: var(--danger);">This field is required</span>
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Success</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input" value="Salt Lake Depot" style="box-shadow: inset 0 0 0 1px var(--success);" />
+              <span class="form-helper" style="color: var(--success);">✓ Depot name is available</span>
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">With Helper Text</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Depot name</label>
+              <input type="text" class="input" placeholder="e.g., Salt Lake Depot" />
+              <span class="form-helper">A descriptive name for this bus depot</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Search Input</h3>
+      <div class="component-demo">
+        <div style="max-width: 400px;">
+          <div class="search-input">
+            <input type="text" class="input" placeholder="Search depots, routes..." />
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-24">Select Dropdown States</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-24);">
+          <div>
+            <div class="text-small text-secondary mb-8">Default</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Status</label>
+              <select class="select">
+                <option>Select status...</option>
+                <option>Active</option>
+                <option>Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Selected</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Status</label>
+              <select class="select">
+                <option selected>Active</option>
+                <option>Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Focused</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Status</label>
+              <select class="select" style="box-shadow: inset 0 0 0 1px var(--primary);">
+                <option>Active</option>
+                <option>Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Disabled</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Status</label>
+              <select class="select" disabled>
+                <option>Active</option>
+                <option>Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16 mt-32">Textarea States</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-24);">
+          <div>
+            <div class="text-small text-secondary mb-8">Default</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Description</label>
+              <textarea class="input" rows="3" placeholder="Enter route description..."></textarea>
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Filled</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Description</label>
+              <textarea class="input" rows="3">Main arterial route connecting city center with airport terminal.</textarea>
+            </div>
+          </div>
+          <div>
+            <div class="text-small text-secondary mb-8">Disabled</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Description</label>
+              <textarea class="input" rows="3" disabled>This field is disabled</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Badges -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Badges & Status Pills</h2>
+      <div class="component-demo">
+        <div class="demo-row">
+          <span class="badge badge-success">Active</span>
+          <span class="badge badge-warning">Warning</span>
+          <span class="badge badge-danger">Inactive</span>
+          <span class="badge badge-info">Draft</span>
+          <span class="badge badge-neutral">Neutral</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Avatars -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Avatars</h2>
+      <div class="component-demo">
+        <div class="demo-row" style="align-items: center;">
+          <div>
+            <div class="avatar avatar-xs" style="margin-bottom: var(--space-8);">K</div>
+            <div class="text-caption text-secondary">xs · 16px</div>
+          </div>
+          <div>
+            <div class="avatar" style="margin-bottom: var(--space-8);">JD</div>
+            <div class="text-caption text-secondary">default · 32px</div>
+          </div>
+          <div>
+            <div class="avatar avatar-lg" style="margin-bottom: var(--space-8);">JD</div>
+            <div class="text-caption text-secondary">lg · 40px</div>
+          </div>
+          <div class="avatar" style="background-color: #0E9F6E;">SM</div>
+          <div class="avatar" style="background-color: #D97706;">RK</div>
+          <div class="avatar" style="background-color: #E02424;">AP</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty State -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Empty State</h2>
+      <div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="warehouse" style="width: 40px; height: 40px; color: var(--text-tertiary);"></i></div>
+        <h3 class="empty-state-title">No depots yet</h3>
+        <p class="empty-state-description">
+          Get started by adding your first bus depot. Depots are the home base for your buses and the foundation of your route network.
+        </p>
+        <button class="btn btn-primary">
+          <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+          Add your first depot
+        </button>
+      </div>
+    </section>
+
+    <!-- Data Table -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Data Table</h2>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="sortable">Depot name ↕</th>
+              <th class="sortable">Depot ID ↕</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div style="font-weight: var(--weight-medium);">Salt Lake Depot</div></td>
+              <td><span style="font-family: monospace;">DPT-014</span></td>
+              <td><span class="text-secondary">Sector V, Salt Lake</span></td>
+              <td><span class="badge badge-success">Active</span></td>
+              <td><button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button></td>
+            </tr>
+            <tr class="selected">
+              <td><div style="font-weight: var(--weight-medium);">Garia Depot</div></td>
+              <td><span style="font-family: monospace;">DPT-007</span></td>
+              <td><span class="text-secondary">Garia, South Kolkata</span></td>
+              <td><span class="badge badge-success">Active</span></td>
+              <td><button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="font-weight: var(--weight-medium);">Belgharia Depot</div></td>
+              <td><span style="font-family: monospace;">DPT-003</span></td>
+              <td><span class="text-secondary">Belgharia, North Kolkata</span></td>
+              <td><span class="badge badge-warning">Maintenance</span></td>
+              <td><button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Cards</h2>
+      
+      <h3 class="text-h3 mb-16">Basic Card</h3>
+      <div class="card" style="max-width: 400px; margin-bottom: var(--space-24);">
+        <div class="card-header">
+          <h3 class="text-h3">Card Header</h3>
+        </div>
+        <div class="card-body">
+          <p class="text-body">This is the card body with some content. Cards can contain any type of content.</p>
+        </div>
+        <div class="card-footer">
+          <button class="btn btn-primary">Action</button>
+          <button class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+
+      <h3 class="text-h3 mb-16">Interactive Card (Hover Effect)</h3>
+      <div class="card card-interactive" style="max-width: 400px;">
+        <div class="card-body">
+          <h3 class="text-h3 mb-8">Kolkata Metro Bus Services</h3>
+          <p class="text-body text-secondary">Click to view organization details</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Breadcrumb -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Breadcrumb</h2>
+      <div class="component-demo">
+        <div class="breadcrumb">
+          <div class="breadcrumb-item">
+            <a href="#" class="breadcrumb-link">Kolkata Metro Bus Services</a>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <a href="#" class="breadcrumb-link">Salt Lake Depot</a>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <span class="breadcrumb-current">Routes</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Tabs</h2>
+      <div class="component-demo">
+        <div class="tabs">
+          <button class="tab active">Log In</button>
+          <button class="tab">Sign Up</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading Skeletons -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Loading Skeletons</h2>
+      <div class="component-demo">
+        <div class="skeleton skeleton-title mb-16"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text" style="width: 60%;"></div>
+        <div style="height: var(--space-24);"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    </section>
+
+    <!-- Tree Navigation -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Tree Navigation</h2>
+      <p class="text-body text-secondary mb-32">
+        A hierarchical sidebar navigation for exploring nested data: Organizations → Depots → Routes.
+        Supports expand/collapse, active state highlighting, inline add actions, and connecting lines between levels.
+        Designed to sit inside the <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-default);">.nav-rail-body</code> container.
+      </p>
+
+      <!-- Full interactive demo -->
+      <h3 class="text-h3 mb-16">Interactive Demo</h3>
+      <p class="text-body text-secondary mb-16">Hover over any row to reveal the <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-default);">+</code> action. Click the chevron to expand or collapse a branch.</p>
+      <div class="component-demo" style="padding: 0; overflow: hidden; max-width: 280px;">
+        <div style="background: var(--surface-card); padding: var(--space-12);">
+          <div class="tree-nav" style="flex: unset; overflow: visible;">
+            <ul class="tree-list">
+              <li class="tree-item">
+                <div class="tree-row">
+                  <button class="tree-toggle open" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                  <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                  <span class="tree-label">Kolkata Metro Bus</span>
+                  <button class="tree-add" title="New depot"><i data-lucide="plus" style="width: 11px; height: 11px;"></i></button>
+                </div>
+                <ul class="tree-children">
+                  <li class="tree-item">
+                    <div class="tree-row active">
+                      <button class="tree-toggle open" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                      <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
+                      <span class="tree-label">Salt Lake Depot</span>
+                      <button class="tree-add" title="New route"><i data-lucide="plus" style="width: 11px; height: 11px;"></i></button>
+                    </div>
+                    <ul class="tree-children">
+                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 22 — Downtown Loop</span></div></li>
+                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 45A — Airport Express</span></div></li>
+                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 78 — City Center</span></div></li>
+                    </ul>
+                  </li>
+                  <li class="tree-item">
+                    <div class="tree-row">
+                      <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                      <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                      <span class="tree-label">New Town Depot</span>
+                      <button class="tree-add" title="New route"><i data-lucide="plus" style="width: 11px; height: 11px;"></i></button>
+                    </div>
+                    <ul class="tree-children collapsed"></ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            <button class="tree-add-org">
+              <i data-lucide="plus" style="width: 11px; height: 11px;"></i>
+              New Organization
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- States -->
+      <h3 class="text-h3 mb-16" style="margin-top: var(--space-32);">Row States</h3>
+      <div class="component-demo" style="max-width: 280px;">
+        <div style="display: flex; flex-direction: column; gap: var(--space-8);">
+          <div>
+            <p class="text-caption text-secondary mb-8">Default</p>
+            <div class="tree-row" style="border-radius: var(--radius-button);">
+              <button class="tree-toggle open"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+              <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+              <span class="tree-label">Salt Lake Depot</span>
+              <button class="tree-add" style="opacity: 1;" title="New route"><i data-lucide="plus" style="width: 11px; height: 11px;"></i></button>
+            </div>
+          </div>
+          <div>
+            <p class="text-caption text-secondary mb-8">Active</p>
+            <div class="tree-row active" style="border-radius: var(--radius-button);">
+              <button class="tree-toggle open"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+              <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
+              <span class="tree-label">Salt Lake Depot</span>
+              <button class="tree-add" style="opacity: 1;" title="New route"><i data-lucide="plus" style="width: 11px; height: 11px;"></i></button>
+            </div>
+          </div>
+          <div>
+            <p class="text-caption text-secondary mb-8">Collapsed (chevron pointing right)</p>
+            <div class="tree-row" style="border-radius: var(--radius-button);">
+              <button class="tree-toggle"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+              <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+              <span class="tree-label">New Town Depot</span>
+              <button class="tree-add" style="opacity: 1;" title="New route"><i data-lucide="plus" style="width: 11px; height: 11px;"></i></button>
+            </div>
+          </div>
+          <div>
+            <p class="text-caption text-secondary mb-8">Leaf node (route — no toggle)</p>
+            <div style="border-left: 1px solid var(--border-default); margin-left: 16px; padding-left: 8px;">
+              <div class="tree-row" style="position: relative; border-radius: var(--radius-button);">
+                <span class="tree-leaf-spacer"></span>
+                <i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+                <span class="tree-label">Route 22 — Downtown Loop</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hierarchy levels -->
+      <h3 class="text-h3 mb-16" style="margin-top: var(--space-32);">Hierarchy & Icons</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-24);">
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <i data-lucide="building-2" style="width: 16px; height: 16px; color: var(--primary);"></i>
+              <span class="text-h3">Level 0 — Organization</span>
+            </div>
+            <p class="text-small text-secondary">Root of the tree. Expands to show depots. <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">building-2</code> icon. <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">+</code> adds a new depot.</p>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <i data-lucide="warehouse" style="width: 16px; height: 16px; color: var(--primary);"></i>
+              <span class="text-h3">Level 1 — Depot</span>
+            </div>
+            <p class="text-small text-secondary">Child of org. Expands to show routes. <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">warehouse</code> icon. <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">+</code> adds a new route.</p>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <i data-lucide="map-pin" style="width: 16px; height: 16px; color: var(--text-tertiary);"></i>
+              <span class="text-h3">Level 2 — Route</span>
+            </div>
+            <p class="text-small text-secondary">Leaf node. No toggle or <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">+</code>. Uses a spacer to align with parent icons. <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">map-pin</code> icon.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Classes reference -->
+      <h3 class="text-h3 mb-16" style="margin-top: var(--space-32);">CSS Classes</h3>
+      <div class="component-demo" style="padding: 0; overflow: hidden;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Element</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-nav</code></td><td><code style="font-family: monospace; font-size: 14px;">div</code></td><td>Scrollable wrapper that fills <code style="font-family: monospace; font-size: 14px;">.nav-rail-body</code></td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-list</code></td><td><code style="font-family: monospace; font-size: 14px;">ul</code></td><td>Root list, no indentation</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-children</code></td><td><code style="font-family: monospace; font-size: 14px;">ul</code></td><td>Nested list with left border (connecting line) and indentation</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-children.collapsed</code></td><td><code style="font-family: monospace; font-size: 14px;">ul</code></td><td>Hides children — toggled by <code style="font-family: monospace; font-size: 14px;">toggleTree()</code></td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-item</code></td><td><code style="font-family: monospace; font-size: 14px;">li</code></td><td>Individual node wrapper</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-row</code></td><td><code style="font-family: monospace; font-size: 14px;">div</code></td><td>Clickable row — flex, 40px min-height, hover + active states</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-row.active</code></td><td><code style="font-family: monospace; font-size: 14px;">div</code></td><td>Current page highlight — primary blue bg tint + bold label</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-toggle</code></td><td><code style="font-family: monospace; font-size: 14px;">button</code></td><td>Chevron expand/collapse button — rotates 90° when <code style="font-family: monospace; font-size: 14px;">.open</code></td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-toggle.open</code></td><td><code style="font-family: monospace; font-size: 14px;">button</code></td><td>Expanded state — chevron rotated down</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-label</code></td><td><code style="font-family: monospace; font-size: 14px;">span</code></td><td>Truncated text label — 13px, ellipsis overflow</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-add</code></td><td><code style="font-family: monospace; font-size: 14px;">button</code></td><td>Inline <code style="font-family: monospace; font-size: 14px;">+</code> button — hidden until row hover</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-leaf-spacer</code></td><td><code style="font-family: monospace; font-size: 14px;">span</code></td><td>16px spacer replaces toggle on leaf nodes to align icons</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-add-org</code></td><td><code style="font-family: monospace; font-size: 14px;">button</code></td><td>Root-level "New Organization" ghost button below the tree</td></tr>
+            <tr><td><code style="font-family: monospace; font-size: 14px;">.tree-settings</code></td><td><code style="font-family: monospace; font-size: 14px;">div</code></td><td>Settings row pinned to bottom of <code style="font-family: monospace; font-size: 14px;">.nav-rail-body</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Behaviour -->
+      <h3 class="text-h3 mb-16" style="margin-top: var(--space-32);">Behaviour Notes</h3>
+      <div class="component-demo">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-24);">
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0;"></div>
+              <span class="text-h3">Expand / Collapse</span>
+            </div>
+            <p class="text-small text-secondary">Clicking the chevron toggles <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">.collapsed</code> on the sibling <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">.tree-children</code> and toggles <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">.open</code> on the button. Chevron rotates 90° via CSS transition.</p>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0;"></div>
+              <span class="text-h3">Inline Add</span>
+            </div>
+            <p class="text-small text-secondary">The <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">+</code> button is <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">opacity: 0</code> by default and fades in on row hover. It creates the next level down: org → depot, depot → route.</p>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0;"></div>
+              <span class="text-h3">Connecting Lines</span>
+            </div>
+            <p class="text-small text-secondary"><code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">.tree-children</code> uses <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">border-left</code> for the vertical line. Each <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">.tree-row::before</code> draws the 8px horizontal connector using <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">--border-default</code>.</p>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+              <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0;"></div>
+              <span class="text-h3">Scroll</span>
+            </div>
+            <p class="text-small text-secondary">The <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">.tree-nav</code> div is <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">overflow-y: auto</code> with a 3px custom scrollbar. Header and footer remain fixed while the tree scrolls.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: var(--space-64); padding-top: var(--space-32); border-top: 1px solid var(--border-default);">
+      <p class="text-small text-tertiary">
+          Transit Frequency Console Design System • 8px Grid • Fully Responsive (Desktop → Tablet → Mobile)
+  </div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+    function toggleTree(btn) {
+      const item = btn.closest('.tree-item');
+      const children = item.querySelector(':scope > .tree-children');
+      if (children) { children.classList.toggle('collapsed'); btn.classList.toggle('open'); }
+    }
+  </script>
+</body>
+</html>

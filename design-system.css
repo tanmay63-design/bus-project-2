@@ -1,0 +1,257 @@
+/**
+ * Transit Frequency Console - Design System
+ * Professional B2B SaaS design for city-level public transport operators
+ * 8px base grid | Fully responsive (Desktop → Tablet → Mobile)
+ */
+
+/* ========================================
+   FONTS - self-hosted Inter (variable, latin)
+   ======================================== */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ========================================
+   RESET & BASE
+   ======================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--surface-background);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* ========================================
+   CSS VARIABLES - DESIGN TOKENS
+   ======================================== */
+:root {
+  /* ===== COLOR PALETTE ===== */
+  /* Primary */
+  --primary: #1A56DB;
+  --primary-hover: #1641A3;
+  
+  /* Surface */
+  --surface-background: #F7F8FA;
+  --surface-card: #FFFFFF;
+  
+  /* Borders */
+  --border-default: #E3E6EB;
+  
+  /* Text */
+  --text-primary: #1A1D23;
+  --text-secondary: #5B6470;
+  --text-tertiary: #9AA3AF;
+  
+  /* Semantic */
+  --success: #0E9F6E;
+  --warning: #D97706;
+  --danger: #E02424;
+  --info: #1A56DB;
+  
+  /* ===== SPACING (8px grid) ===== */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+  
+  /* ===== TYPOGRAPHY ===== */
+  --font-family: 'Inter', sans-serif;
+  
+  /* Font sizes — RULE: minimum 14px, even numbers only */
+  --font-display: 28px;
+  --font-title: 26px;
+  --font-h1: 24px;
+  --font-h2: 20px;
+  --font-h3: 16px;
+  --font-body: 14px;
+  --font-small: 14px;   /* was 13px — raised to the 14px minimum */
+  --font-caption: 14px; /* was 12px — raised to the 14px minimum */
+  --font-badge: 12px;   /* SOLE exception to the 14px minimum — badges ONLY */
+  
+  /* Font weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  
+  /* ===== ELEVATION ===== */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-modal: 0 8px 24px rgba(16, 24, 40, 0.12);
+  
+  /* ===== BORDER RADIUS ===== */
+  --radius-card: 8px;
+  --radius-button: 6px;
+  --radius-modal: 12px;
+  --radius-input: 6px;
+  
+  /* ===== LAYOUT ===== */
+  --nav-rail-width: 300px; /* matches the map screen's left panel width */
+  --top-bar-height: 64px;
+  --content-max-width: 100%;
+  --gutter: 24px;
+  
+  /* ===== TRANSITIONS ===== */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* ========================================
+   TYPOGRAPHY SCALE
+   ======================================== */
+.text-display {
+  font-size: var(--font-display);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.text-title {
+  font-size: var(--font-title);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.text-h1 {
+  font-size: var(--font-h1);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.text-h2 {
+  font-size: var(--font-h2);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.text-h3 {
+  font-size: var(--font-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.text-body {
+  font-size: var(--font-body);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.text-small {
+  font-size: var(--font-small);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.text-caption {
+  font-size: var(--font-caption);
+  font-weight: var(--weight-medium);
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+}
+
+/* Text utilities */
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+.text-primary-color { color: var(--primary); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger { color: var(--danger); }
+
+/* ========================================
+   SPACING UTILITIES
+   ======================================== */
+.gap-4 { gap: var(--space-4); }
+.gap-8 { gap: var(--space-8); }
+.gap-16 { gap: var(--space-16); }
+.gap-24 { gap: var(--space-24); }
+.gap-32 { gap: var(--space-32); }
+.gap-48 { gap: var(--space-48); }
+
+.p-8 { padding: var(--space-8); }
+.p-16 { padding: var(--space-16); }
+.p-24 { padding: var(--space-24); }
+.p-32 { padding: var(--space-32); }
+
+.px-16 { padding-left: var(--space-16); padding-right: var(--space-16); }
+.px-24 { padding-left: var(--space-24); padding-right: var(--space-24); }
+.py-16 { padding-top: var(--space-16); padding-bottom: var(--space-16); }
+.py-24 { padding-top: var(--space-24); padding-bottom: var(--space-24); }
+
+.mb-8 { margin-bottom: var(--space-8); }
+.mb-16 { margin-bottom: var(--space-16); }
+.mb-24 { margin-bottom: var(--space-24); }
+.mb-32 { margin-bottom: var(--space-32); }
+
+.mt-8 { margin-top: var(--space-8); }
+.mt-16 { margin-top: var(--space-16); }
+.mt-24 { margin-top: var(--space-24); }
+
+/* ========================================
+   LAYOUT UTILITIES
+   ======================================== */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-1 { flex: 1; }
+.flex-wrap { flex-wrap: wrap; }
+
+.grid { display: grid; }
+.grid-cols-12 { 
+  display: grid; 
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gutter);
+}
+
+/* ========================================
+   FOCUS STATES (Accessibility)
+   ======================================== */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-button);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

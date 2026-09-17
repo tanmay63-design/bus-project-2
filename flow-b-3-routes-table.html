@@ -1,0 +1,596 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Routes - Salt Lake Depot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css?v=sidebar-leaf-spacing">
+  <style>
+    .table-container .text-small { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Left Navigation Rail -->
+    <nav class="nav-rail">
+      <div class="nav-rail-header">
+        <div style="display: flex; align-items: center; gap: var(--space-8);">
+          <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+          </div>
+          <div>
+            <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+              Transit Console
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-rail-body">
+        <div class="tree-nav">
+          <ul class="tree-list">
+            <li class="tree-item">
+              <div class="tree-row">
+                <button class="tree-toggle open" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                <span class="tree-label">Kolkata Metro Bus</span>
+              </div>
+              <ul class="tree-children">
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf active">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Salt Lake Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Garia Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Belgharia Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Tollygunge Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Howrah Bridge Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Kalighat Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Jadavpur Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row tree-row-leaf">
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">New Town Depot</span>
+                  </div>
+                </li>
+                <li class="tree-item">
+                  <button class="tree-add-org" onclick="openAddDepotModal()">
+                    <i data-lucide="plus" style="width: 11px; height: 11px;"></i>
+                    Add New Depot
+                  </button>
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <button class="tree-add-org">
+            <i data-lucide="plus" style="width: 11px; height: 11px;"></i>
+            New Organization
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar footer: John Doe -->
+      <div class="nav-rail-footer">
+        <div class="org-switcher">
+          <div class="avatar">JD</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: var(--font-small); font-weight: var(--weight-medium); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">John Doe</div>
+          </div>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main content area -->
+    <div class="app-main">
+      <!-- Top bar -->
+      <header class="top-bar">
+        <div style="flex: 1;"></div>
+
+        <!-- Right side actions -->
+        <button class="btn-icon" title="Help">
+          <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+        </button>
+        
+        <button class="btn-icon" title="Settings" aria-label="Settings">
+          <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+        </button>
+      </header>
+
+      <!-- Content -->
+      <main class="app-content">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb mb-24">
+          <div class="breadcrumb-item">
+            <i data-lucide="building-2" style="width: 16px; height: 16px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+            <a href="#" class="breadcrumb-link">Kolkata Metro Bus Services</a>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <i data-lucide="warehouse" style="width: 16px; height: 16px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+            <a href="#" class="breadcrumb-link">Salt Lake Depot</a>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <span class="breadcrumb-current">Routes</span>
+          </div>
+        </div>
+
+        <!-- Depot header card -->
+        <div class="card mb-32">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-16 mb-8">
+                  <h1 class="text-title">Salt Lake Depot</h1>
+                  <span class="badge badge-success">Active</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-24); margin-top: var(--space-16);">
+                  <div>
+                    <div class="text-caption mb-8">Depot ID</div>
+                    <div class="text-body">DPT-014</div>
+                  </div>
+                  <div>
+                    <div class="text-caption mb-8">Location</div>
+                    <div class="text-body">Sector V, Salt Lake, Kolkata</div>
+                  </div>
+                  <div>
+                    <div class="text-caption mb-8">Routes</div>
+                    <div class="text-body">12 routes</div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-secondary">
+                Edit depot
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page header -->
+        <div class="flex items-center justify-between mb-24">
+          <div>
+            <h2 class="text-h2 mb-8">Routes</h2>
+            <p class="text-body text-secondary">
+              12 routes operating from Salt Lake Depot
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="window.location.href='route-map.html'">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            Create route
+          </button>
+        </div>
+
+        <!-- Filters and actions -->
+        <div class="flex items-center gap-16 mb-24">
+          <div class="search-input" style="max-width: 320px;">
+            <input type="text" class="input" placeholder="Search routes..." />
+          </div>
+          <div style="position: relative;">
+            <button class="btn btn-secondary" id="statusDropdownTrigger" style="display: flex; align-items: center; gap: var(--space-8); min-width: 150px; justify-content: space-between; background-color: var(--surface-card);">
+              <span id="statusDropdownLabel">All statuses</span>
+              <i data-lucide="chevron-down" style="width: 14px; height: 14px; flex-shrink: 0;"></i>
+            </button>
+            <div class="ds-action-dropdown" id="statusDropdownMenu" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 100;">
+              <button class="ds-action-dropdown-item active" onclick="selectStatus(this, 'All statuses')">All statuses</button>
+              <button class="ds-action-dropdown-item" onclick="selectStatus(this, 'Active')">Active</button>
+              <button class="ds-action-dropdown-item" onclick="selectStatus(this, 'Inactive')">Inactive</button>
+              <button class="ds-action-dropdown-item" onclick="selectStatus(this, 'Draft')">Draft</button>
+            </div>
+          </div>
+          <div style="flex: 1;"></div>
+          <button class="btn btn-ghost">
+            <span style="font-size: 16px;">↓</span>
+            Export
+          </button>
+        </div>
+
+        <!-- Data table -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="sortable">Route name ↕</th>
+                <th>Description</th>
+                <th class="sortable">Stops ↕</th>
+                <th class="sortable">Length ↕</th>
+                <th>Status</th>
+                <th class="sortable">Last updated ↕</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 22 — Downtown Loop <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Sealdah via Park Street</span>
+                </td>
+                <td>18 stops</td>
+                <td>
+                  <span class="text-small text-secondary">12.4 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">2 hours ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 45A — Airport Express <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Airport via VIP Road</span>
+                </td>
+                <td>12 stops</td>
+                <td>
+                  <span class="text-small text-secondary">8.6 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">4 hours ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 78 — City Center <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Esplanade via Central</span>
+                </td>
+                <td>22 stops</td>
+                <td>
+                  <span class="text-small text-secondary">15.2 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">1 day ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 12B — North Shuttle <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Barasat via BT Road</span>
+                </td>
+                <td>16 stops</td>
+                <td>
+                  <span class="text-small text-secondary">18.7 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">1 day ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 56 — Lake Gardens <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Lake Gardens via EM Bypass</span>
+                </td>
+                <td>14 stops</td>
+                <td>
+                  <span class="text-small text-secondary">10.3 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">2 days ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 33 — Tech Park Shuttle <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to New Town via Rajarhat</span>
+                </td>
+                <td>10 stops</td>
+                <td>
+                  <span class="text-small text-secondary">7.2 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">2 days ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 91 — Hospital Line <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Medical College via AJC Bose</span>
+                </td>
+                <td>20 stops</td>
+                <td>
+                  <span class="text-small text-secondary">13.8 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-warning">Reduced</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">3 days ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 67A — Southern Express <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Jadavpur via Gariahat</span>
+                </td>
+                <td>24 stops</td>
+                <td>
+                  <span class="text-small text-secondary">19.5 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">4 days ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 15 — University Circuit <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Alipore via College Street</span>
+                </td>
+                <td>17 stops</td>
+                <td>
+                  <span class="text-small text-secondary">14.1 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">5 days ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 88 — Evening Special <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Howrah Station via Maidan</span>
+                </td>
+                <td>15 stops</td>
+                <td>
+                  <span class="text-small text-secondary">11.7 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">1 week ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 102 — Riverside <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to Princep Ghat via Strand Road</span>
+                </td>
+                <td>13 stops</td>
+                <td>
+                  <span class="text-small text-secondary">9.8 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-info">Draft</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">1 week ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="#" class="table-link">Route 29 — Mall Connector <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Salt Lake to South City Mall via Anwar Shah</span>
+                </td>
+                <td>11 stops</td>
+                <td>
+                  <span class="text-small text-secondary">8.4 km</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">2 weeks ago</span>
+                </td>
+                <td>
+                  <button class="btn-icon"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between" style="margin-top: var(--space-24);">
+          <div class="text-small text-secondary">
+            Showing 12 of 12 routes
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-secondary" disabled>Previous</button>
+            <button class="btn btn-secondary" disabled>Next</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <!-- Add Depot Modal -->
+  <div class="modal-overlay" id="addDepotModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Add depot</h2>
+        <button class="btn-icon" onclick="closeAddDepotModal()"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="depot-name">Depot name</label>
+          <input type="text" id="depot-name" class="input" placeholder="e.g., Salt Lake Depot" required />
+          <span class="form-helper">A descriptive name for this bus depot</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="depot-id">Depot ID</label>
+          <input type="text" id="depot-id" class="input" placeholder="e.g., DPT-001" required />
+          <span class="form-helper">Unique identifier used in your internal systems</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="depot-location">Location</label>
+          <input type="text" id="depot-location" class="input" placeholder="Enter address or area" required />
+          <span class="form-helper">Physical address or general area of the depot</span>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="depot-status">Status</label>
+          <select id="depot-status" class="input" style="appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2714%27 height=%2714%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%239AA3AF%27 stroke-width=%272%27%3E%3Cpolyline points=%276 9 12 15 18 9%27%3E%3C/polyline%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer;">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="maintenance">Under maintenance</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAddDepotModal()">Cancel</button>
+        <button class="btn btn-primary">Save depot</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+    function toggleTree(btn) {
+      const item = btn.closest('.tree-item');
+      const children = item.querySelector(':scope > .tree-children');
+      if (children) { children.classList.toggle('collapsed'); btn.classList.toggle('open'); }
+    }
+  </script>
+  <script>
+    const trigger = document.getElementById('statusDropdownTrigger');
+    const menu = document.getElementById('statusDropdownMenu');
+
+    trigger.addEventListener('click', function(e) {
+      e.stopPropagation();
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', function() {
+      menu.style.display = 'none';
+    });
+
+    function selectStatus(item, value) {
+      document.getElementById('statusDropdownLabel').textContent = value;
+      menu.querySelectorAll('.ds-action-dropdown-item').forEach(el => el.classList.remove('active'));
+      item.classList.add('active');
+      menu.style.display = 'none';
+    }
+    function openAddDepotModal() {
+      document.getElementById('addDepotModal').classList.add('open');
+    }
+    function closeAddDepotModal() {
+      document.getElementById('addDepotModal').classList.remove('open');
+    }
+    document.getElementById('addDepotModal').addEventListener('click', function(e) {
+      if (e.target === this) closeAddDepotModal();
+    });
+  </script>
+</body>
+</html>

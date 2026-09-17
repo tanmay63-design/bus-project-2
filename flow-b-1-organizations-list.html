@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organizations - Transit Frequency Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Left Navigation Rail -->
+    <nav class="nav-rail">
+      <div class="nav-rail-header">
+        <div style="display: flex; align-items: center; gap: var(--space-8);">
+          <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+          </div>
+          <div>
+            <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+              Transit Console
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-rail-body">
+        <div class="tree-nav">
+          <ul class="tree-list">
+            <li class="tree-item">
+              <div class="tree-row active">
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0; margin-left: 16px;"></i>
+                <span class="tree-label">Kolkata Metro Bus</span>
+              </div>
+            </li>
+          </ul>
+          <button class="tree-add-org">
+            <i data-lucide="plus" style="width: 11px; height: 11px;"></i>
+            New Organization
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar footer: John Doe -->
+      <div class="nav-rail-footer">
+        <div class="org-switcher">
+          <div class="avatar">JD</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: var(--font-small); font-weight: var(--weight-medium); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">John Doe</div>
+          </div>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main content area -->
+    <div class="app-main">
+      <!-- Top bar -->
+      <header class="top-bar">
+        <!-- Search -->
+        <div class="search-input" style="max-width: 400px;">
+          <input type="text" class="input" placeholder="Search organizations..." />
+        </div>
+
+        <div style="flex: 1;"></div>
+
+        <!-- Right side actions -->
+        <button class="btn-icon" title="Help">
+          <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+        </button>
+        
+        <button class="btn-icon" title="Settings" aria-label="Settings">
+          <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+        </button>
+      </header>
+
+      <!-- Content -->
+      <main class="app-content">
+        <!-- Page header -->
+        <div class="flex items-center justify-between mb-32">
+          <div>
+            <h1 class="text-display mb-8">Organizations</h1>
+            <p class="text-body text-secondary">
+              Manage your transit organizations
+            </p>
+          </div>
+          <button class="btn btn-primary">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            New organization
+          </button>
+        </div>
+
+        <!-- Organizations grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--space-24);">
+          
+          <!-- Org card 1 -->
+          <div class="card card-interactive" style="height: 100%;">
+            <div class="card-body">
+              <div class="flex items-center gap-16 mb-16">
+                <div class="avatar avatar-lg" style="background-color: var(--primary);">KM</div>
+                <div class="flex-1">
+                  <h3 class="text-h3 mb-4">Kolkata Metro Bus Services</h3>
+                  <span class="badge badge-success">Active</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: var(--space-24); margin-top: var(--space-16); padding-top: var(--space-16); border-top: 1px solid var(--border-default);">
+                <div>
+                  <div class="text-caption mb-4">Depots</div>
+                  <div class="text-h3">8</div>
+                </div>
+                <div>
+                  <div class="text-caption mb-4">Routes</div>
+                  <div class="text-h3">47</div>
+                </div>
+                <div style="flex: 1;"></div>
+                <div style="text-align: right;">
+                  <div class="text-caption mb-4">Last updated</div>
+                  <div class="text-small">2 hours ago</div>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+
+          <!-- Org card 2 -->
+          <div class="card card-interactive" style="height: 100%;">
+            <div class="card-body">
+              <div class="flex items-center gap-16 mb-16">
+                <div class="avatar avatar-lg" style="background-color: #0E9F6E;">DT</div>
+                <div class="flex-1">
+                  <h3 class="text-h3 mb-4">Delhi Transport Corporation</h3>
+                  <span class="badge badge-success">Active</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: var(--space-24); margin-top: var(--space-16); padding-top: var(--space-16); border-top: 1px solid var(--border-default);">
+                <div>
+                  <div class="text-caption mb-4">Depots</div>
+                  <div class="text-h3">12</div>
+                </div>
+                <div>
+                  <div class="text-caption mb-4">Routes</div>
+                  <div class="text-h3">156</div>
+                </div>
+                <div style="flex: 1;"></div>
+                <div style="text-align: right;">
+                  <div class="text-caption mb-4">Last updated</div>
+                  <div class="text-small">1 day ago</div>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+
+          <!-- Org card 3 -->
+          <div class="card card-interactive" style="height: 100%;">
+            <div class="card-body">
+              <div class="flex items-center gap-16 mb-16">
+                <div class="avatar avatar-lg" style="background-color: #D97706;">MB</div>
+                <div class="flex-1">
+                  <h3 class="text-h3 mb-4">Mumbai BEST Undertaking</h3>
+                  <span class="badge badge-warning">Planning</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: var(--space-24); margin-top: var(--space-16); padding-top: var(--space-16); border-top: 1px solid var(--border-default);">
+                <div>
+                  <div class="text-caption mb-4">Depots</div>
+                  <div class="text-h3">15</div>
+                </div>
+                <div>
+                  <div class="text-caption mb-4">Routes</div>
+                  <div class="text-h3">203</div>
+                </div>
+                <div style="flex: 1;"></div>
+                <div style="text-align: right;">
+                  <div class="text-caption mb-4">Last updated</div>
+                  <div class="text-small">3 days ago</div>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+
+          <!-- New org card -->
+          <div class="card card-interactive" style="border: 2px dashed var(--border-default); background-color: var(--surface-background); height: 100%;">
+            <div class="card-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background-color: rgba(26, 86, 219, 0.1); display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: var(--space-16);">
+                +
+              </div>
+              <h3 class="text-h3 mb-8">New organization</h3>
+              <p class="text-small text-secondary">
+                Create a new transit organization
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+    function toggleTree(btn) {
+      const item = btn.closest('.tree-item');
+      const children = item.querySelector(':scope > .tree-children');
+      if (children) { children.classList.toggle('collapsed'); btn.classList.toggle('open'); }
+    }
+  </script>
+</body>
+</html>

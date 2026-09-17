@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kolkata Metro Bus Services - Transit Frequency Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Left Navigation Rail -->
+    <nav class="nav-rail">
+      <div class="nav-rail-header">
+        <div style="display: flex; align-items: center; gap: var(--space-8);">
+          <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+          </div>
+          <div>
+            <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+              Transit Console
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-rail-body">
+        <div class="tree-nav">
+          <ul class="tree-list">
+            <li class="tree-item">
+              <div class="tree-row active">
+                <button class="tree-toggle open" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
+                <span class="tree-label">Kolkata Metro Bus</span>
+              </div>
+              <ul class="tree-children collapsed"></ul>
+            </li>
+            <li class="tree-item">
+              <div class="tree-row">
+                <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                <span class="tree-label">Delhi Transport Corp</span>
+              </div>
+              <ul class="tree-children collapsed"></ul>
+            </li>
+            <li class="tree-item">
+              <div class="tree-row">
+                <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                <span class="tree-label">Mumbai BEST</span>
+              </div>
+              <ul class="tree-children collapsed"></ul>
+            </li>
+            <li class="tree-item">
+              <div class="tree-row">
+                <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                <span class="tree-label">Chennai MTC</span>
+              </div>
+              <ul class="tree-children collapsed"></ul>
+            </li>
+          </ul>
+          <button class="tree-add-org">
+            <i data-lucide="plus" style="width: 11px; height: 11px;"></i>
+            New Organization
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar footer: John Doe -->
+      <div class="nav-rail-footer">
+        <div class="org-switcher">
+          <div class="avatar">JD</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: var(--font-small); font-weight: var(--weight-medium); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">John Doe</div>
+          </div>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main content area -->
+    <div class="app-main">
+      <!-- Top bar -->
+      <header class="top-bar">
+        <!-- Search -->
+        <div class="search-input" style="max-width: 400px;">
+          <input type="text" class="input" placeholder="Search depots, routes..." />
+        </div>
+
+        <div style="flex: 1;"></div>
+
+        <!-- Right side actions -->
+        <button class="btn-icon" title="Help">
+          <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+        </button>
+        
+        <button class="btn-icon" title="Settings" aria-label="Settings">
+          <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+        </button>
+      </header>
+
+      <!-- Content -->
+      <main class="app-content">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb mb-24">
+          <div class="breadcrumb-item">
+            <i data-lucide="building-2" style="width: 16px; height: 16px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+            <span class="breadcrumb-current">Kolkata Metro Bus Services</span>
+          </div>
+        </div>
+
+        <!-- Page header -->
+        <div class="flex items-center justify-between mb-32">
+          <div>
+            <h1 class="text-display mb-8">Depots</h1>
+            <p class="text-body text-secondary">
+              Manage bus depots across your organization
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="openAddDepotModal()">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            Add depot
+          </button>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state">
+          <div class="empty-state-icon"><i data-lucide="warehouse" style="width: 40px; height: 40px; color: var(--text-tertiary);"></i></div>
+          <h2 class="empty-state-title">No depots yet</h2>
+          <p class="empty-state-description">
+            Get started by adding your first bus depot. Depots are the home base for your buses and the foundation of your route network.
+          </p>
+          <button class="btn btn-primary" onclick="openAddDepotModal()">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            Add your first depot
+          </button>
+        </div>
+      </main>
+    </div>
+  </div>
+  <!-- Add Depot Modal -->
+  <div class="modal-overlay" id="addDepotModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Add depot</h2>
+        <button class="btn-icon" onclick="closeAddDepotModal()"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="depot-name">Depot name</label>
+          <input type="text" id="depot-name" class="input" placeholder="e.g., Salt Lake Depot" required />
+          <span class="form-helper">A descriptive name for this bus depot</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="depot-id">Depot ID</label>
+          <input type="text" id="depot-id" class="input" placeholder="e.g., DPT-001" required />
+          <span class="form-helper">Unique identifier used in your internal systems</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="depot-location">Location</label>
+          <input type="text" id="depot-location" class="input" placeholder="Enter address or area" required />
+          <span class="form-helper">Physical address or general area of the depot</span>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="depot-status">Status</label>
+          <select id="depot-status" class="input" style="appearance: none; -webkit-appearance: none; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239AA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer;">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="maintenance">Under maintenance</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAddDepotModal()">Cancel</button>
+        <button class="btn btn-primary">Save depot</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+    function toggleTree(btn) {
+      const item = btn.closest('.tree-item');
+      const children = item.querySelector(':scope > .tree-children');
+      if (children) { children.classList.toggle('collapsed'); btn.classList.toggle('open'); }
+    }
+    function openAddDepotModal() {
+      document.getElementById('addDepotModal').classList.add('open');
+    }
+    function closeAddDepotModal() {
+      document.getElementById('addDepotModal').classList.remove('open');
+    }
+    document.getElementById('addDepotModal').addEventListener('click', function(e) {
+      if (e.target === this) closeAddDepotModal();
+    });
+  </script>
+</body>
+</html>

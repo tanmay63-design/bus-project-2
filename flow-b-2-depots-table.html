@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Depots - Kolkata Metro Bus Services</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+  <style>
+    .routes-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      color: var(--primary);
+      font-size: var(--font-body);
+      font-weight: var(--weight-medium);
+      text-decoration: none;
+      transition: gap var(--transition-fast);
+    }
+    .routes-link .arrow-icon {
+      opacity: 0;
+      transition: opacity var(--transition-fast), transform var(--transition-fast);
+      transform: translateX(-4px);
+    }
+    .routes-link:hover .arrow-icon {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .routes-link:hover {
+      gap: var(--space-6);
+    }
+    .table-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      color: var(--text-primary);
+      font-weight: var(--weight-medium);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+    .table-link .table-link-arrow {
+      opacity: 0;
+      transition: opacity var(--transition-fast), transform var(--transition-fast);
+      transform: translate(-2px, 2px);
+      flex-shrink: 0;
+    }
+    .table-link:hover {
+      color: var(--primary);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .table-link:hover .table-link-arrow {
+      opacity: 1;
+      transform: translate(0, 0);
+    }
+    .action-menu-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .action-dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-modal);
+      z-index: 100;
+      min-width: 200px;
+      overflow: hidden;
+    }
+    .action-dropdown.open {
+      display: block;
+    }
+    .action-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      padding: 10px 14px;
+      font-family: var(--font-family);
+      font-size: var(--font-body);
+      line-height: 20px;
+      color: var(--text-primary);
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+    .action-dropdown-item:hover {
+      background: var(--surface-background);
+    }
+    .action-dropdown-item.danger {
+      color: var(--danger);
+    }
+    .action-dropdown-item.danger:hover {
+      background: #fff5f5;
+    }
+    .status-filter-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .status-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: 10px var(--space-16);
+      font-size: var(--font-body);
+      line-height: 20px;
+      font-family: var(--font-family);
+      color: var(--text-primary);
+      background-color: var(--surface-card);
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--border-default);
+      border-radius: var(--radius-input);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    .status-filter-btn:hover {
+      box-shadow: inset 0 0 0 1px var(--text-secondary);
+    }
+    .status-dropdown {
+      display: none;
+      position: absolute;
+      left: 0;
+      top: calc(100% + 4px);
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-modal);
+      z-index: 100;
+      min-width: 180px;
+      overflow: hidden;
+    }
+    .status-dropdown.open {
+      display: block;
+    }
+    .status-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      padding: 10px 14px;
+      font-family: var(--font-family);
+      font-size: var(--font-body);
+      line-height: 20px;
+      color: var(--text-primary);
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+    .status-dropdown-item:hover {
+      background: var(--surface-background);
+    }
+    .status-dropdown-item.selected {
+      font-weight: var(--weight-medium);
+      color: var(--primary);
+    }
+    .table-container .text-small { font-size: 14px; }
+    .modal-overlay { display: none; }
+    .modal-overlay.open { display: flex; }
+    .delete-modal { max-width: 440px; }
+    .delete-modal-icon {
+      width: 48px; height: 48px;
+      background: #fff5f5;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: var(--space-16);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Left Navigation Rail -->
+    <nav class="nav-rail">
+      <div class="nav-rail-header">
+        <div style="display: flex; align-items: center; gap: var(--space-8);">
+          <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+          </div>
+          <div>
+            <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+              Transit Console
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-rail-body">
+        <div class="tree-nav">
+          <ul class="tree-list">
+            <li class="tree-item">
+              <div class="tree-row active">
+                <button class="tree-toggle open" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
+                <span class="tree-label">Kolkata Metro Bus</span>
+              </div>
+              <ul class="tree-children">
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Salt Lake Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Garia Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Belgharia Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Tollygunge Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Howrah Bridge Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Kalighat Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">Jadavpur Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <div class="tree-row">
+                    <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                    <i data-lucide="warehouse" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                    <span class="tree-label">New Town Depot</span>
+                  </div>
+                  <ul class="tree-children collapsed"></ul>
+                </li>
+                <li class="tree-item">
+                  <button class="tree-add-org" onclick="openAddDepotModal()">
+                    <i data-lucide="plus" style="width: 11px; height: 11px;"></i>
+                    New Depot
+                  </button>
+                </li>
+              </ul>
+            </li>
+          </ul>
+            <li class="tree-item">
+              <div class="tree-row">
+                <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                <span class="tree-label">Delhi Transport Corp</span>
+              </div>
+              <ul class="tree-children collapsed"></ul>
+            </li>
+            <li class="tree-item">
+              <div class="tree-row">
+                <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                <span class="tree-label">Mumbai BEST</span>
+              </div>
+              <ul class="tree-children collapsed"></ul>
+            </li>
+            <li class="tree-item">
+              <div class="tree-row">
+                <button class="tree-toggle" onclick="toggleTree(this)"><i data-lucide="chevron-right" style="width: 12px; height: 12px;"></i></button>
+                <i data-lucide="building-2" style="width: 13px; height: 13px; color: var(--text-secondary); flex-shrink: 0;"></i>
+                <span class="tree-label">Chennai MTC</span>
+              </div>
+              <ul class="tree-children collapsed"></ul>
+            </li>
+          </ul>
+          <button class="tree-add-org">
+            <i data-lucide="plus" style="width: 11px; height: 11px;"></i>
+            New Organization
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar footer: John Doe -->
+      <div class="nav-rail-footer">
+        <div class="org-switcher">
+          <div class="avatar">JD</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: var(--font-small); font-weight: var(--weight-medium); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">John Doe</div>
+          </div>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main content area -->
+    <div class="app-main">
+      <!-- Top bar -->
+      <header class="top-bar">
+        <div style="flex: 1;"></div>
+
+        <!-- Right side actions -->
+        <button class="btn-icon" title="Help">
+          <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+        </button>
+
+        <button class="btn-icon" title="Settings" aria-label="Settings">
+          <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+        </button>
+      </header>
+
+      <!-- Content -->
+      <main class="app-content">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb mb-24">
+          <div class="breadcrumb-item">
+            <i data-lucide="building-2" style="width: 16px; height: 16px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+            <a href="#" class="breadcrumb-link">Kolkata Metro Bus Services</a>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <span class="breadcrumb-current">Depots</span>
+          </div>
+        </div>
+
+        <!-- Organization header card -->
+        <div class="card mb-32">
+          <div class="card-body">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-16 mb-8">
+                  <h1 class="text-title">Kolkata Metro Bus Services</h1>
+                  <span class="badge badge-success">Active</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-24); margin-top: var(--space-16);">
+                  <div>
+                    <div class="text-caption mb-8">Org ID</div>
+                    <div class="text-body">ORG-001</div>
+                  </div>
+                  <div>
+                    <div class="text-caption mb-8">City</div>
+                    <div class="text-body">Kolkata, West Bengal</div>
+                  </div>
+                  <div>
+                    <div class="text-caption mb-8">Depots</div>
+                    <div class="text-body">8 depots</div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-secondary">Edit organization</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page header -->
+        <div class="flex items-center justify-between mb-24">
+          <div>
+            <h2 class="text-h2 mb-8">Depots</h2>
+            <p class="text-body text-secondary">
+              8 depots across Kolkata Metro Bus Services
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="openAddDepotModal()">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            Add depot
+          </button>
+        </div>
+
+        <!-- Filters and actions -->
+        <div class="flex items-center gap-16 mb-24">
+          <div class="search-input" style="max-width: 320px;">
+            <input type="text" class="input" placeholder="Search depots..." />
+          </div>
+          <div class="status-filter-wrapper">
+            <button class="status-filter-btn" id="statusFilterBtn" onclick="toggleStatusFilter()">
+              <span id="statusFilterLabel">All statuses</span>
+              <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-tertiary);"></i>
+            </button>
+            <div class="status-dropdown" id="statusDropdown">
+              <button class="status-dropdown-item selected" onclick="selectStatus('All statuses')">All statuses</button>
+              <button class="status-dropdown-item" onclick="selectStatus('Active')">Active</button>
+              <button class="status-dropdown-item" onclick="selectStatus('Inactive')">Inactive</button>
+              <button class="status-dropdown-item" onclick="selectStatus('Maintenance')">Maintenance</button>
+            </div>
+          </div>
+          <div style="flex: 1;"></div>
+          <button class="btn btn-ghost">
+            <i data-lucide="arrow-down" style="width: 16px; height: 16px;"></i>
+            Export
+          </button>
+        </div>
+
+        <!-- Data table -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="sortable">Depot name <i data-lucide="chevrons-up-down" style="width: 12px; height: 12px; display: inline; vertical-align: middle;"></i></th>
+                <th class="sortable">Depot ID <i data-lucide="chevrons-up-down" style="width: 12px; height: 12px; display: inline; vertical-align: middle;"></i></th>
+                <th>Location</th>
+                <th class="sortable">Routes <i data-lucide="chevrons-up-down" style="width: 12px; height: 12px; display: inline; vertical-align: middle;"></i></th>
+                <th>Status</th>
+                <th class="sortable">Last updated <i data-lucide="chevrons-up-down" style="width: 12px; height: 12px; display: inline; vertical-align: middle;"></i></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">Salt Lake Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-014</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Sector V, Salt Lake</span>
+                </td>
+                <td>12 routes</td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">2 hours ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('Salt Lake Depot','DPT-014','Sector V, Salt Lake','active')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('Salt Lake Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">Garia Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-007</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Garia, South Kolkata</span>
+                </td>
+                <td>8 routes</td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">5 hours ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('Garia Depot','DPT-007','Garia, South Kolkata','active')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('Garia Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">Belgharia Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-003</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Belgharia, North Kolkata</span>
+                </td>
+                <td>6 routes</td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">1 day ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('Belgharia Depot','DPT-003','Belgharia, North Kolkata','active')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('Belgharia Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">Tollygunge Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-021</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Tollygunge, South Kolkata</span>
+                </td>
+                <td>9 routes</td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">1 day ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('Tollygunge Depot','DPT-021','Tollygunge, South Kolkata','active')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('Tollygunge Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">Howrah Bridge Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-009</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Howrah Station Area</span>
+                </td>
+                <td>5 routes</td>
+                <td>
+                  <span class="badge badge-warning">Maintenance</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">2 days ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('Howrah Bridge Depot','DPT-009','Howrah Station Area','maintenance')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('Howrah Bridge Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">Kalighat Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-018</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Kalighat, Central Kolkata</span>
+                </td>
+                <td>4 routes</td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">3 days ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('Kalighat Depot','DPT-018','Kalighat, Central Kolkata','active')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('Kalighat Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">Jadavpur Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-011</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">Jadavpur, South Kolkata</span>
+                </td>
+                <td>7 routes</td>
+                <td>
+                  <span class="badge badge-success">Active</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">5 days ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('Jadavpur Depot','DPT-011','Jadavpur, South Kolkata','active')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('Jadavpur Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <a href="flow-b-3-routes-table.html" class="table-link">New Town Depot <i data-lucide="arrow-up-right" class="table-link-arrow" style="width: 13px; height: 13px;"></i></a>
+                </td>
+                <td>
+                  <span class="text-small" style="font-family: monospace;">DPT-025</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">New Town, Rajarhat</span>
+                </td>
+                <td>3 routes</td>
+                <td>
+                  <span class="badge badge-info">Planning</span>
+                </td>
+                <td>
+                  <span class="text-small text-secondary">1 week ago</span>
+                </td>
+                <td>
+                  <div class="action-menu-wrapper">
+                    <button class="btn-icon" onclick="toggleMenu(this)"><i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i></button>
+                    <div class="action-dropdown">
+                      <button class="action-dropdown-item" onclick="openEditModal('New Town Depot','DPT-025','New Town, Rajarhat','planning')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i> Edit depot</button>
+                      <button class="action-dropdown-item danger" onclick="openDeleteModal('New Town Depot')"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i> Delete depot</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between" style="margin-top: var(--space-24);">
+          <div class="text-small text-secondary">
+            Showing 8 of 8 depots
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-secondary" disabled>Previous</button>
+            <button class="btn btn-secondary" disabled>Next</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <!-- Edit Depot Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit depot</h2>
+        <button class="btn-icon" onclick="closeModal('editModal')"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm">
+          <div class="form-group">
+            <label class="form-label" for="edit-depot-name">Depot name</label>
+            <input type="text" id="edit-depot-name" class="input" placeholder="e.g., Salt Lake Depot" required />
+            <span class="form-helper">A descriptive name for this bus depot</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-depot-id">Depot ID</label>
+            <input type="text" id="edit-depot-id" class="input" placeholder="e.g., DPT-001" required />
+            <span class="form-helper">Unique identifier used in your internal systems</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-location">Location</label>
+            <input type="text" id="edit-location" class="input" placeholder="Enter address or area" required />
+            <span class="form-helper">Physical address or general area of the depot</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-status">Status</label>
+            <select id="edit-status" class="select">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="maintenance">Under maintenance</option>
+              <option value="planning">Planning</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="closeModal('editModal')">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Depot Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal delete-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Delete depot</h2>
+        <button class="btn-icon" onclick="closeModal('deleteModal')"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="delete-modal-icon"><i data-lucide="trash-2" style="width: 22px; height: 22px; color: var(--danger);"></i></div>
+        <p class="text-body" style="margin-bottom: var(--space-8);">Are you sure you want to delete <strong id="delete-depot-name"></strong>?</p>
+        <p class="text-small text-secondary">This action cannot be undone. All routes and data associated with this depot will be permanently removed.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+        <button class="btn" style="background: var(--danger); color: #fff;" onclick="closeModal('deleteModal')">Delete depot</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleMenu(btn) {
+      const dropdown = btn.nextElementSibling;
+      const isOpen = dropdown.classList.contains('open');
+      // Close all open dropdowns
+      document.querySelectorAll('.action-dropdown.open').forEach(d => d.classList.remove('open'));
+      if (!isOpen) dropdown.classList.add('open');
+    }
+
+    function toggleStatusFilter() {
+      const dropdown = document.getElementById('statusDropdown');
+      const isOpen = dropdown.classList.contains('open');
+      document.querySelectorAll('.action-dropdown.open').forEach(d => d.classList.remove('open'));
+      dropdown.classList.toggle('open', !isOpen);
+    }
+
+    function selectStatus(value) {
+      document.getElementById('statusFilterLabel').textContent = value;
+      document.getElementById('statusDropdown').classList.remove('open');
+      // Update selected state
+      document.querySelectorAll('.status-dropdown-item').forEach(item => {
+        item.classList.toggle('selected', item.textContent === value);
+      });
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.action-menu-wrapper') && !e.target.closest('.status-filter-wrapper')) {
+        document.querySelectorAll('.action-dropdown.open').forEach(d => d.classList.remove('open'));
+        document.getElementById('statusDropdown').classList.remove('open');
+      }
+    });
+
+    function openEditModal(name, id, location, status) {
+      document.querySelectorAll('.action-dropdown.open').forEach(d => d.classList.remove('open'));
+      document.getElementById('edit-depot-name').value = name;
+      document.getElementById('edit-depot-id').value = id;
+      document.getElementById('edit-location').value = location;
+      document.getElementById('edit-status').value = status;
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function openDeleteModal(name) {
+      document.querySelectorAll('.action-dropdown.open').forEach(d => d.classList.remove('open'));
+      document.getElementById('delete-depot-name').textContent = name;
+      document.getElementById('deleteModal').classList.add('open');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // Close modal on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.classList.remove('open');
+      });
+    });
+  </script>
+  <!-- Add Depot Modal -->
+  <div class="modal-overlay" id="addDepotModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Add depot</h2>
+        <button class="btn-icon" onclick="closeAddDepotModal()"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="depot-name">Depot name</label>
+          <input type="text" id="depot-name" class="input" placeholder="e.g., Salt Lake Depot" required />
+          <span class="form-helper">A descriptive name for this bus depot</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="depot-id">Depot ID</label>
+          <input type="text" id="depot-id" class="input" placeholder="e.g., DPT-001" required />
+          <span class="form-helper">Unique identifier used in your internal systems</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="depot-location">Location</label>
+          <input type="text" id="depot-location" class="input" placeholder="Enter address or area" required />
+          <span class="form-helper">Physical address or general area of the depot</span>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="depot-status">Status</label>
+          <select id="depot-status" class="input" style="appearance: none; -webkit-appearance: none; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239AA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; cursor: pointer;">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="maintenance">Under maintenance</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAddDepotModal()">Cancel</button>
+        <button class="btn btn-primary">Save depot</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+    function toggleTree(btn) {
+      const item = btn.closest('.tree-item');
+      const children = item.querySelector(':scope > .tree-children');
+      if (children) { children.classList.toggle('collapsed'); btn.classList.toggle('open'); }
+    }
+    function openAddDepotModal() {
+      document.getElementById('addDepotModal').classList.add('open');
+    }
+    function closeAddDepotModal() {
+      document.getElementById('addDepotModal').classList.remove('open');
+    }
+    document.getElementById('addDepotModal').addEventListener('click', function(e) {
+      if (e.target === this) closeAddDepotModal();
+    });
+  </script>
+</body>
+</html>

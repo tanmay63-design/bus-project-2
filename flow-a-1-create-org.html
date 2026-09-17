@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Organization - Transit Frequency Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+</head>
+<body>
+  <div class="centered-layout">
+    <div class="centered-card">
+      <!-- Icon -->
+      <div style="text-align: center; margin-bottom: var(--space-32);">
+        <div style="width: 64px; height: 64px; background-color: rgba(26, 86, 219, 0.1); border-radius: 12px; margin: 0 auto var(--space-24); display: flex; align-items: center; justify-content: center;">
+          <i data-lucide="building-2" style="width: 32px; height: 32px; color: var(--primary);"></i>
+        </div>
+        <h1 class="text-display" style="margin-bottom: var(--space-8);">Create your organization</h1>
+        <p class="text-body text-secondary">
+          Get started by naming your transit organization
+        </p>
+      </div>
+
+      <!-- Form -->
+      <form>
+        <div class="form-group">
+          <label class="form-label" for="org-name">Organization name</label>
+          <input 
+            type="text" 
+            id="org-name" 
+            class="input" 
+            placeholder="e.g., Kolkata Metro Bus Services"
+            required
+            autofocus
+          />
+          <span class="form-helper">
+            This is typically your city's transit authority or department name
+          </span>
+        </div>
+
+        <div style="display: flex; gap: var(--space-8); justify-content: flex-end; margin-top: var(--space-32);">
+          <button type="submit" class="btn btn-primary">
+            Create organization
+          </button>
+        </div>
+      </form>
+
+
+    </div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

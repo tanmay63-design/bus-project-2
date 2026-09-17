@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Route — Salt Lake Depot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* ============================================================
+       PAGE LAYOUT (one-off, mirrors route-map.html conventions)
+       ============================================================ */
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+    .route-editor {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Left panel — identical shell to route-map.html */
+    .route-panel {
+      width: 300px;
+      flex-shrink: 0;
+      background: var(--surface-card);
+      border-right: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-24);
+      overflow-y: auto;
+    }
+    /* Build-mode variant: zero panel padding so header/scroll-body/footer
+       manage their own padding and the footer can pin to the bottom. */
+    .route-panel.route-panel--build {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .route-panel-back {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+      text-decoration: none;
+      margin-bottom: var(--space-24);
+      transition: color 0.15s;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      font-family: var(--font-family);
+    }
+    .route-panel-back:hover { color: var(--text-primary); }
+
+    .route-panel-title {
+      font-size: 18px;
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-24);
+    }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      margin: var(--space-24) 0;
+    }
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-default);
+    }
+    .or-divider span {
+      font-size: var(--font-small);
+      color: var(--text-tertiary);
+      font-weight: var(--weight-medium);
+    }
+
+    /* Map area */
+    .route-map-area { flex: 1; position: relative; }
+    #map { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    /* Top-center map search overlay (Step 3) */
+    .map-search {
+      position: absolute;
+      top: var(--space-16);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 380px;
+      max-width: calc(100% - var(--space-32));
+      z-index: 600;
+    }
+    .map-search-results {
+      margin-top: var(--space-8);
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .map-search-result {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      padding: 10px var(--space-16);
+      cursor: pointer;
+      border-bottom: 1px solid var(--border-default);
+      transition: background var(--transition-fast);
+    }
+    .map-search-result:last-child { border-bottom: none; }
+    .map-search-result:hover { background: var(--surface-background); }
+
+    /* Modal 2-column grid for the details form (Step 1) */
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-16);
+    }
+    .modal-grid .form-group { margin-bottom: 0; }
+
+    /* Numbered Leaflet markers (built from tokens) */
+    .stop-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      color: #fff;
+      font-family: var(--font-family);
+      font-size: var(--font-caption);
+      font-weight: var(--weight-semibold);
+      border: 2px solid var(--surface-card);
+      box-shadow: var(--shadow-card);
+    }
+    .stop-marker--up { background: var(--primary); }
+    .stop-marker--dn { background: var(--warning); }
+
+    /* ============================================================
+       NEW COMPONENT — not yet in design system
+       (1) SEGMENTED CONTROL  (UP / DN map-click mode toggle)
+       Built only from existing tokens.
+       ============================================================ */
+    .seg {
+      display: inline-flex;
+      align-items: stretch;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-button);
+      overflow: hidden;
+      background: var(--surface-card);
+    }
+    .seg-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-family);
+      font-size: var(--font-small);
+      font-weight: var(--weight-medium);
+      padding: var(--space-4) var(--space-16);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      min-width: 48px;
+    }
+    .seg-btn + .seg-btn { border-left: 1px solid var(--border-default); }
+    .seg-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    .seg-btn:not(.active):hover { color: var(--text-primary); }
+
+    /* ============================================================
+       NEW COMPONENT — not yet in design system
+       (4) SIZE MODIFIERS: .btn-small and .input-sm
+       Sizes only (smaller padding/font). No new colors.
+       ============================================================ */
+    .btn-small {
+      padding: var(--space-4) var(--space-12);
+      font-size: var(--font-small);
+      gap: var(--space-4);
+    }
+    .input-sm {
+      padding: var(--space-4) var(--space-8);
+      font-size: var(--font-small);
+      border-radius: var(--radius-input);
+    }
+
+    /* ============================================================
+       NEW COMPONENT — not yet in design system
+       (2) COMPACT STOP-ROW LIST + inline DN-coords accordion.
+       Replaces .table for the dense 300px panel. Tokens only.
+       ============================================================ */
+    .stop-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .stop-row {
+      border-bottom: 1px solid var(--border-default);
+    }
+    .stop-row-main {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-8) 0;
+    }
+    .stop-drag {
+      color: var(--text-tertiary);
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .stop-drag:active { cursor: grabbing; }
+    .stop-index {
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+      font-size: var(--font-caption);
+      font-weight: var(--weight-semibold);
+      color: var(--text-secondary);
+    }
+    .stop-name { flex: 1; min-width: 0; }
+    .stop-row.dragging { opacity: 0.4; }
+    .stop-row.drag-over { border-top: 2px solid var(--primary); }
+
+    .stop-flags {
+      display: flex;
+      gap: var(--space-16);
+      padding: 0 0 var(--space-8) 28px;
+    }
+    .stop-dists {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+      padding: 0 0 var(--space-8) 28px;
+    }
+
+    /* Inline DN-coords accordion (part of component 2) */
+    .stop-accordion {
+      background: var(--surface-background);
+      border-radius: var(--radius-input);
+      margin: 0 0 var(--space-8) 28px;
+      padding: var(--space-8);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-8);
+    }
+    .stop-accordion .form-label { font-size: var(--font-caption); }
+
+    /* ============================================================
+       NEW COMPONENT — not yet in design system
+       (3) SMALL CHECKBOX / TOGGLE  (Dummy, Cong/Int flags)
+       Checked = var(--primary); unchecked = var(--border-default).
+       ============================================================ */
+    .flag-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--font-caption);
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+    .flag-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .flag-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid var(--border-default);
+      background: var(--surface-card);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+    .flag-box i { width: 11px; height: 11px; opacity: 0; }
+    .flag-toggle input:checked + .flag-box {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .flag-toggle input:checked + .flag-box i { opacity: 1; }
+    .flag-toggle input:focus-visible + .flag-box {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    /* Build-panel internal regions (layout one-offs) */
+    .build-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-16) var(--space-24);
+    }
+    .build-header { padding: var(--space-24) var(--space-24) 0; }
+    .build-footer {
+      border-top: 1px solid var(--border-default);
+      padding: var(--space-16) var(--space-24);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    /* Compact empty state (fits 300px) — reuses empty-state tokens/spirit */
+    .empty-compact {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: var(--space-16) 0;
+    }
+    .empty-compact .empty-state-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: var(--space-16);
+    }
+    .empty-hints {
+      counter-reset: hint;
+      list-style: none;
+      text-align: left;
+      margin: var(--space-16) 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      width: 100%;
+    }
+    .empty-hints li {
+      display: flex;
+      gap: var(--space-8);
+      align-items: flex-start;
+    }
+    .empty-hints li::before {
+      counter-increment: hint;
+      content: counter(hint);
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--surface-background);
+      border: 1px solid var(--border-default);
+      color: var(--text-secondary);
+      font-size: var(--font-caption);
+      font-weight: var(--weight-semibold);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Small inline spinner for the Save button (tokens only) */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast icon slot + error accent (reuses .toast) */
+    .toast i { width: 18px; height: 18px; flex-shrink: 0; }
+    .toast.toast-error i { color: var(--danger); }
+    .toast.toast-success i { color: var(--success); }
+  </style>
+</head>
+<body>
+  <!-- Top bar (mirrors route-map.html) -->
+  <header class="top-bar">
+    <div style="display: flex; align-items: center; gap: var(--space-8);">
+      <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+        <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+      </div>
+      <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+        Transit Console
+      </div>
+    </div>
+    <div style="flex: 1;"></div>
+    <button class="btn-icon" title="Help">
+      <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+    </button>
+    <button class="btn-icon" title="Settings" aria-label="Settings">
+      <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+    </button>
+  </header>
+
+  <div class="route-editor">
+    <!-- Left panel — content is swapped between "create" and "build" states -->
+    <div class="route-panel" id="panel"></div>
+
+    <!-- Map -->
+    <div class="route-map-area">
+      <!-- Top-center search overlay (Step 3) -->
+      <div class="map-search" id="mapSearch" style="display:none;">
+        <div class="search-input">
+          <input type="text" class="input" id="mapSearchInput"
+                 placeholder="Search location to navigate map..." />
+        </div>
+        <div class="card map-search-results" id="mapSearchResults" style="display:none;"></div>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       STEP 1 — DETAILS MODAL
+       Reuses .modal-overlay/.modal/.modal-header/.modal-body/.modal-footer
+       exactly like modal-add-depot.html.
+       ============================================================ -->
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Add new route details</h2>
+        <button class="btn-icon" onclick="closeDetailsModal()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form onsubmit="return false;">
+          <div class="modal-grid">
+            <div class="form-group">
+              <label class="form-label" for="f-name">Route name</label>
+              <input type="text" id="f-name" class="input" placeholder="e.g., Route 22 — Downtown Loop" />
+              <span class="form-helper" id="h-name">A descriptive name for this route</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-hours">Service hours</label>
+              <input type="text" id="f-hours" class="input" placeholder="e.g., 18h" />
+              <span class="form-helper">Total daily span of service</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="f-t1">Terminal 1 (origin)</label>
+              <input type="text" id="f-t1" class="input" placeholder="e.g., Esplanade" />
+              <span class="form-helper" id="h-t1">Where the route begins</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-t2">Terminal 2 (destination)</label>
+              <input type="text" id="f-t2" class="input" placeholder="e.g., Tollygunge" />
+              <span class="form-helper" id="h-t2">Where the route ends</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="f-from">Service time from (HH:MM)</label>
+              <input type="time" id="f-from" class="input" value="06:00" />
+              <span class="form-helper">First departure</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-till">Service time till (HH:MM)</label>
+              <input type="time" id="f-till" class="input" value="23:00" />
+              <span class="form-helper">Last departure</span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveDetails()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       STEP 4 — DUPLICATE-STOP MODAL (reuses .modal pattern)
+       ============================================================ -->
+  <div class="modal-overlay" id="dupeModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Possible duplicate stops</h2>
+        <button class="btn-icon" onclick="closeDupeModal()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-small mb-16">
+          These stops sit very close together and may be duplicates. Review before building the route.
+        </p>
+        <div id="dupeList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDupeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="proceedBuild()">Proceed anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    /* ========================================================
+       DRAFT STATE — nothing is persisted until the final Save
+       ======================================================== */
+    const state = {
+      mode: 'create',      // 'create' | 'build'
+      built: false,        // true after "Build route"
+      saving: false,
+      direction: 'UP',     // 'UP' | 'DN'
+      selectedRoute: null, // chosen value from the custom dropdown
+      details: {},
+      stops: []            // {id,name,lat,lng,dummy,congInt,expanded,dnLat,dnLng,upDist,dnDist}
+    };
+    let nextId = 1;
+    const PROXIMITY_M = 300;
+
+    /* ---- Leaflet setup (as in route-map.html) ---- */
+    const map = L.map('map').setView([22.5726, 88.3639], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+    const upMarkers = L.layerGroup().addTo(map);
+    const dnMarkers = L.layerGroup().addTo(map);
+    const lines = L.layerGroup().addTo(map);
+
+    /* ---- Toast helper (reuses .toast) ---- */
+    function showToast(msg, type) {
+      const t = document.createElement('div');
+      t.className = 'toast' + (type ? ' toast-' + type : '');
+      const icon = type === 'error' ? 'alert-triangle'
+                 : type === 'success' ? 'check-circle' : 'info';
+      t.innerHTML = '<i data-lucide="' + icon + '"></i><span class="text-small" style="color:#fff">'
+                  + msg + '</span>';
+      document.body.appendChild(t);
+      lucide.createIcons();
+      setTimeout(() => t.remove(), 3200);
+    }
+
+    /* ========================================================
+       STEP 1 — DETAILS MODAL
+       ======================================================== */
+    function openDetailsModal() {
+      document.getElementById('detailsModal').classList.add('open');
+      lucide.createIcons();
+    }
+    function closeDetailsModal() {
+      document.getElementById('detailsModal').classList.remove('open');
+    }
+    document.getElementById('detailsModal').addEventListener('click', function (e) {
+      if (e.target === this) closeDetailsModal();
+    });
+
+    function fieldError(inputId, helperId, on, msg) {
+      const input = document.getElementById(inputId);
+      const helper = document.getElementById(helperId);
+      input.classList.toggle('error', on);
+      helper.classList.toggle('error', on);
+      if (on && msg) helper.textContent = msg;
+    }
+
+    function saveDetails() {
+      const name = document.getElementById('f-name').value.trim();
+      const t1 = document.getElementById('f-t1').value.trim();
+      const t2 = document.getElementById('f-t2').value.trim();
+
+      let ok = true;
+      if (!name) { fieldError('f-name', 'h-name', true, 'Route name is required'); ok = false; }
+      else fieldError('f-name', 'h-name', false);
+      if (!t1) { fieldError('f-t1', 'h-t1', true, 'Origin terminal is required'); ok = false; }
+      else fieldError('f-t1', 'h-t1', false);
+      if (!t2) { fieldError('f-t2', 'h-t2', true, 'Destination terminal is required'); ok = false; }
+      else fieldError('f-t2', 'h-t2', false);
+
+      if (!ok) { showToast('Please fill in the required fields.', 'error'); return; }
+
+      // No backend — store locally and enter build mode.
+      state.details = {
+        name, t1, t2,
+        hours: document.getElementById('f-hours').value.trim(),
+        from: document.getElementById('f-from').value,
+        till: document.getElementById('f-till').value
+      };
+      closeDetailsModal();
+      enterBuildMode();
+      showToast('Click on the map to add stops to your route.');
+    }
+
+    /* ========================================================
+       MODE SWITCHING
+       ======================================================== */
+    function enterBuildMode() {
+      state.mode = 'build';
+      document.getElementById('panel').classList.add('route-panel--build');
+      document.getElementById('mapSearch').style.display = 'block';
+      renderPanel();
+    }
+    function exitToCreate() {
+      // Leave guard
+      if (state.stops.length > 0 &&
+          !confirm('Discard this route draft? Your ' + state.stops.length + ' unsaved stop(s) will be lost.')) {
+        return;
+      }
+      state.mode = 'create';
+      state.built = false;
+      state.stops = [];
+      state.direction = 'UP';
+      document.getElementById('panel').classList.remove('route-panel--build');
+      document.getElementById('mapSearch').style.display = 'none';
+      redrawMap();
+      renderPanel();
+    }
+
+    /* ========================================================
+       PANEL RENDERING
+       ======================================================== */
+    function renderPanel() {
+      const panel = document.getElementById('panel');
+      panel.innerHTML = (state.mode === 'create') ? createPanelHTML() : buildPanelHTML();
+      wirePanel();
+      lucide.createIcons();
+    }
+
+    const ROUTES = [
+      'Route 22 — Downtown Loop', 'Route 45A — Airport Express',
+      'Route 78 — City Center', 'Route 12B — North Shuttle',
+      'Route 56 — Lake Gardens', 'Route 33 — Tech Park Shuttle',
+      'Route 91 — Hospital Line', 'Route 67A — Southern Express',
+      'Route 15 — University Circuit', 'Route 88 — Evening Special',
+      'Route 102 — Riverside', 'Route 29 — Mall Connector'
+    ];
+
+    function createPanelHTML() {
+      const items = ROUTES.map(r => `
+        <button type="button" class="ds-action-dropdown-item${state.selectedRoute === r ? ' active' : ''}" data-route="${r}">
+          ${state.selectedRoute === r ? '<i data-lucide="check" style="width:16px;height:16px;"></i>' : '<span style="width:16px;"></span>'}
+          ${r}
+        </button>`).join('');
+      const chosen = state.selectedRoute;
+      return `
+        <a href="flow-b-3-routes-table.html" class="route-panel-back">
+          <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to routes
+        </a>
+        <h2 class="route-panel-title">Route Creation</h2>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Select existing route</label>
+          <!-- Custom dropdown: our own .ds-action-dropdown menu (not a native select) -->
+          <div style="position:relative;">
+            <button type="button" class="select" id="routeTrigger" aria-haspopup="listbox" aria-expanded="false"
+                    style="text-align:left;cursor:pointer;${chosen ? '' : 'color:var(--text-tertiary);'}">
+              <span id="routeLabel">${chosen || 'Select a route...'}</span>
+            </button>
+            <div class="ds-action-dropdown" id="routeMenu"
+                 style="position:absolute;top:calc(100% + var(--space-4));left:0;width:100%;z-index:700;display:none;max-height:280px;overflow-y:auto;">
+              ${items}
+            </div>
+          </div>
+        </div>
+        <div class="or-divider"><span>Or</span></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" id="createBtn">
+          <i data-lucide="plus" style="width:16px;height:16px;"></i> Create New Route
+        </button>`;
+    }
+
+    function buildPanelHTML() {
+      return `
+        <div class="build-header">
+          <button class="route-panel-back" id="cancelBuild">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Cancel route creation
+          </button>
+          <h2 class="route-panel-title">Build route</h2>
+          ${directionToggleHTML()}
+        </div>
+        <div class="build-scroll">
+          ${state.stops.length === 0 ? emptyStateHTML() : stopsSectionHTML()}
+        </div>
+        <div class="build-footer">
+          ${footerHTML()}
+        </div>`;
+    }
+
+    /* (1) Segmented control */
+    function directionToggleHTML() {
+      const dnHelper = (state.direction === 'DN' && state.stops.length > 0)
+        ? `<div style="margin-top:var(--space-8);font-size:var(--font-caption);color:var(--text-secondary);">
+             DN clicks fill stops from last to first.</div>`
+        : '';
+      return `
+        <div style="display:flex;align-items:center;gap:var(--space-8);margin-top:var(--space-8);">
+          <span class="text-caption" style="margin:0;">Map click mode</span>
+          <div class="seg" role="group" aria-label="Map click direction">
+            <button class="seg-btn ${state.direction === 'UP' ? 'active' : ''}" data-dir="UP">UP</button>
+            <button class="seg-btn ${state.direction === 'DN' ? 'active' : ''}" data-dir="DN">DN</button>
+          </div>
+        </div>
+        ${dnHelper}`;
+    }
+
+    /* (b) Compact empty state */
+    function emptyStateHTML() {
+      return `
+        <div class="empty-compact">
+          <div class="empty-state-icon">
+            <i data-lucide="map-pin" style="width:40px;height:40px;color:var(--text-tertiary);"></i>
+          </div>
+          <h3 class="text-h3">Add stops to your route</h3>
+          <ol class="empty-hints">
+            <li><span class="text-small">Search a location</span></li>
+            <li><span class="text-small">Click the map to add a stop</span></li>
+            <li><span class="text-small">Stops are added in click order</span></li>
+          </ol>
+          <div class="or-divider" style="width:100%;"><span>Or</span></div>
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;" data-upload="UP">
+            <i data-lucide="upload" style="width:16px;height:16px;"></i> Upload UP CSV
+          </button>
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:var(--space-8);" data-upload="DN">
+            <i data-lucide="upload" style="width:16px;height:16px;"></i> Upload DN CSV
+          </button>
+        </div>`;
+    }
+
+    /* (c) Stops list */
+    function stopsSectionHTML() {
+      const toolbar = state.built ? `
+        <div class="flex gap-8 mb-16">
+          <button class="btn btn-secondary btn-small" style="flex:1;justify-content:center;" data-dist="download">
+            <i data-lucide="download" style="width:14px;height:14px;"></i> Download
+          </button>
+          <button class="btn btn-secondary btn-small" style="flex:1;justify-content:center;" data-dist="upload">
+            <i data-lucide="upload" style="width:14px;height:14px;"></i> Upload distances
+          </button>
+        </div>` : '';
+
+      const rows = state.stops.map((s, i) => stopRowHTML(s, i)).join('');
+      return `
+        <div class="flex items-center justify-between mb-8">
+          <span class="text-caption" style="margin:0;">${state.stops.length} stop${state.stops.length === 1 ? '' : 's'}</span>
+        </div>
+        ${toolbar}
+        <div class="stop-list" id="stopList">${rows}</div>`;
+    }
+
+    function stopRowHTML(s, i) {
+      // After build: flags column is swapped for UP/DN distance inputs.
+      const detailBlock = state.built ? `
+        <div class="stop-dists">
+          <div>
+            <label class="form-label" style="font-size:var(--font-caption);">UP dist (km)</label>
+            <input class="input input-sm" type="number" step="0.1" value="${s.upDist ?? ''}"
+                   data-dist-field="up" data-id="${s.id}" placeholder="0.0">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:var(--font-caption);">DN dist (km)</label>
+            <input class="input input-sm" type="number" step="0.1" value="${s.dnDist ?? ''}"
+                   data-dist-field="dn" data-id="${s.id}" placeholder="0.0">
+          </div>
+        </div>` : `
+        <div class="stop-flags">
+          <label class="flag-toggle">
+            <input type="checkbox" data-flag="dummy" data-id="${s.id}" ${s.dummy ? 'checked' : ''}>
+            <span class="flag-box"><i data-lucide="check"></i></span> Dummy
+          </label>
+          <label class="flag-toggle">
+            <input type="checkbox" data-flag="congInt" data-id="${s.id}" ${s.congInt ? 'checked' : ''}>
+            <span class="flag-box"><i data-lucide="check"></i></span> Cong/Int
+          </label>
+        </div>`;
+
+      const accordion = s.expanded ? `
+        <div class="stop-accordion">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">DN lat</label>
+            <input class="input input-sm" type="number" step="0.0001" value="${s.dnLat ?? ''}"
+                   data-coord="lat" data-id="${s.id}" placeholder="22.5726">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">DN lng</label>
+            <input class="input input-sm" type="number" step="0.0001" value="${s.dnLng ?? ''}"
+                   data-coord="lng" data-id="${s.id}" placeholder="88.3639">
+          </div>
+        </div>` : '';
+
+      return `
+        <div class="stop-row" draggable="true" data-id="${s.id}" data-index="${i}">
+          <div class="stop-row-main">
+            <span class="stop-drag" title="Drag to reorder">
+              <i data-lucide="grip-vertical" style="width:14px;height:14px;"></i>
+            </span>
+            <span class="stop-index">${i + 1}</span>
+            <input class="input input-sm stop-name" value="${escapeAttr(s.name)}"
+                   data-name="1" data-id="${s.id}" placeholder="Stop name">
+            <button class="btn-icon" style="width:28px;height:28px;" data-toggle-acc="${s.id}"
+                    title="DN coordinates" aria-label="DN coordinates">
+              <i data-lucide="chevron-${s.expanded ? 'up' : 'down'}" style="width:16px;height:16px;"></i>
+            </button>
+            <button class="btn-icon" style="width:28px;height:28px;" data-del="${s.id}"
+                    title="Delete stop" aria-label="Delete stop">
+              <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+            </button>
+          </div>
+          ${detailBlock}
+          ${accordion}
+        </div>`;
+    }
+
+    /* (d) Footer actions */
+    function footerHTML() {
+      if (!state.built) {
+        const disabled = state.stops.length < 2 ? 'disabled' : '';
+        const hint = state.stops.length < 2
+          ? `<span class="text-caption text-center" style="margin:0;">Add at least 2 stops to build</span>` : '';
+        return `
+          ${hint}
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;" id="buildBtn" ${disabled}>
+            <i data-lucide="route" style="width:16px;height:16px;"></i> Build route
+          </button>`;
+      }
+      const label = state.saving
+        ? `<span class="spinner"></span> Saving...`
+        : `<i data-lucide="check" style="width:16px;height:16px;"></i> Save`;
+      return `
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" id="saveBtn" ${state.saving ? 'disabled' : ''}>
+          ${label}
+        </button>`;
+    }
+
+    /* ---- Wire up panel event handlers after each render ---- */
+    function wirePanel() {
+      const createBtn = document.getElementById('createBtn');
+      if (createBtn) createBtn.onclick = openDetailsModal;
+
+      // Custom "Select existing route" dropdown (our own .ds-action-dropdown)
+      const trigger = document.getElementById('routeTrigger');
+      const menu = document.getElementById('routeMenu');
+      if (trigger && menu) {
+        trigger.onclick = (e) => {
+          e.stopPropagation();
+          const open = menu.style.display === 'block';
+          menu.style.display = open ? 'none' : 'block';
+          trigger.setAttribute('aria-expanded', String(!open));
+        };
+        menu.addEventListener('click', (e) => e.stopPropagation());
+        menu.querySelectorAll('[data-route]').forEach(item => {
+          item.onclick = () => { state.selectedRoute = item.dataset.route; renderPanel(); };
+        });
+      }
+
+      const cancelBuild = document.getElementById('cancelBuild');
+      if (cancelBuild) cancelBuild.onclick = exitToCreate;
+
+      // Direction toggle
+      document.querySelectorAll('.seg-btn').forEach(b => {
+        b.onclick = () => { state.direction = b.dataset.dir; renderPanel(); };
+      });
+
+      // Empty-state CSV uploads → simulate loading sample stops
+      document.querySelectorAll('[data-upload]').forEach(b => {
+        b.onclick = () => loadSampleStops(b.dataset.upload);
+      });
+
+      // Build button
+      const buildBtn = document.getElementById('buildBtn');
+      if (buildBtn) buildBtn.onclick = attemptBuild;
+
+      // Save button
+      const saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.onclick = saveRoute;
+
+      // Distance CSV buttons
+      document.querySelectorAll('[data-dist]').forEach(b => {
+        b.onclick = () => showToast('Distances CSV ' + b.dataset.dist + ' (draft only).');
+      });
+
+      // Row: name edit
+      document.querySelectorAll('[data-name]').forEach(inp => {
+        inp.oninput = () => { getStop(inp.dataset.id).name = inp.value; };
+      });
+      // Row: flags
+      document.querySelectorAll('[data-flag]').forEach(cb => {
+        cb.onchange = () => { getStop(cb.dataset.id)[cb.dataset.flag] = cb.checked; };
+      });
+      // Row: DN coord inputs
+      document.querySelectorAll('[data-coord]').forEach(inp => {
+        inp.oninput = () => {
+          const s = getStop(inp.dataset.id);
+          s['dn' + (inp.dataset.coord === 'lat' ? 'Lat' : 'Lng')] = parseFloat(inp.value) || null;
+        };
+      });
+      // Row: distance inputs
+      document.querySelectorAll('[data-dist-field]').forEach(inp => {
+        inp.oninput = () => {
+          const s = getStop(inp.dataset.id);
+          s[inp.dataset.distField === 'up' ? 'upDist' : 'dnDist'] = parseFloat(inp.value) || null;
+        };
+      });
+      // Row: accordion toggle
+      document.querySelectorAll('[data-toggle-acc]').forEach(b => {
+        b.onclick = () => { const s = getStop(b.dataset.toggleAcc); s.expanded = !s.expanded; renderPanel(); };
+      });
+      // Row: delete
+      document.querySelectorAll('[data-del]').forEach(b => {
+        b.onclick = () => {
+          state.stops = state.stops.filter(s => s.id != b.dataset.del);
+          redrawMap(); renderPanel();
+          showToast('Stop removed.');
+        };
+      });
+
+      wireDragReorder();
+    }
+
+    /* ---- Native drag reorder for stop rows ---- */
+    function wireDragReorder() {
+      let dragId = null;
+      document.querySelectorAll('.stop-row').forEach(row => {
+        row.addEventListener('dragstart', e => {
+          dragId = row.dataset.id; row.classList.add('dragging');
+        });
+        row.addEventListener('dragend', () => {
+          dragId = null;
+          document.querySelectorAll('.stop-row').forEach(r => r.classList.remove('dragging', 'drag-over'));
+        });
+        row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drag-over'); });
+        row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+        row.addEventListener('drop', e => {
+          e.preventDefault();
+          const from = state.stops.findIndex(s => s.id == dragId);
+          const to = state.stops.findIndex(s => s.id == row.dataset.id);
+          if (from > -1 && to > -1 && from !== to) {
+            const [moved] = state.stops.splice(from, 1);
+            state.stops.splice(to, 0, moved);
+            redrawMap(); renderPanel();
+          }
+        });
+      });
+    }
+
+    /* ========================================================
+       MAP INTERACTIONS (Step 3)
+       ======================================================== */
+    map.on('click', e => {
+      if (state.mode !== 'build') return;
+      if (state.direction === 'UP') addUpStop(e.latlng.lat, e.latlng.lng);
+      else assignDnPoint(e.latlng.lat, e.latlng.lng);
+    });
+
+    function addUpStop(lat, lng) {
+      state.stops.push({
+        id: nextId++, name: 'Stop ' + (state.stops.length + 1),
+        lat, lng, dummy: false, congInt: false, expanded: false,
+        dnLat: null, dnLng: null, upDist: null, dnDist: null
+      });
+      state.built = false; // adding invalidates a prior build
+      redrawMap(); renderPanel();
+    }
+
+    // DN mode: fill DN coords last → first, with a 300m proximity guard.
+    function assignDnPoint(lat, lng) {
+      const target = [...state.stops].reverse().find(s => s.dnLat == null);
+      if (!target) { showToast('All stops already have DN points.', 'error'); return; }
+      const dist = map.distance([lat, lng], [target.lat, target.lng]);
+      if (dist > PROXIMITY_M) {
+        showToast('DN point is ' + Math.round(dist) + 'm from its UP stop (max ' + PROXIMITY_M + 'm).', 'error');
+        return;
+      }
+      target.dnLat = lat; target.dnLng = lng;
+      redrawMap(); renderPanel();
+    }
+
+    function redrawMap() {
+      upMarkers.clearLayers();
+      dnMarkers.clearLayers();
+      lines.clearLayers();
+
+      state.stops.forEach((s, i) => {
+        L.marker([s.lat, s.lng], { icon: numberedIcon(i + 1, 'up') }).addTo(upMarkers);
+        if (s.dnLat != null && s.dnLng != null) {
+          L.marker([s.dnLat, s.dnLng], { icon: numberedIcon(i + 1, 'dn') }).addTo(dnMarkers);
+        }
+      });
+
+      if (state.built && state.stops.length >= 2) {
+        L.polyline(state.stops.map(s => [s.lat, s.lng]),
+          { color: getVar('--primary'), weight: 4 }).addTo(lines);
+        const dn = state.stops.filter(s => s.dnLat != null).map(s => [s.dnLat, s.dnLng]);
+        if (dn.length >= 2) L.polyline(dn, { color: getVar('--warning'), weight: 4, dashArray: '6 6' }).addTo(lines);
+      }
+    }
+
+    function numberedIcon(n, kind) {
+      return L.divIcon({
+        className: '',
+        html: '<div class="stop-marker stop-marker--' + kind + '">' + n + '</div>',
+        iconSize: [26, 26], iconAnchor: [13, 13]
+      });
+    }
+
+    /* ========================================================
+       BUILD + DUPLICATE CHECK (Step 4)
+       ======================================================== */
+    function attemptBuild() {
+      if (state.stops.length < 2) return;
+      const dupes = findDuplicates();
+      if (dupes.length) { openDupeModal(dupes); return; }
+      proceedBuild();
+    }
+
+    function findDuplicates() {
+      const out = [];
+      for (let i = 0; i < state.stops.length; i++) {
+        for (let j = i + 1; j < state.stops.length; j++) {
+          const a = state.stops[i], b = state.stops[j];
+          const d = map.distance([a.lat, a.lng], [b.lat, b.lng]);
+          if (d < 60) out.push({ a: i + 1, b: j + 1, an: a.name, bn: b.name, d: Math.round(d) });
+        }
+      }
+      return out;
+    }
+
+    function openDupeModal(dupes) {
+      document.getElementById('dupeList').innerHTML = dupes.map(x => `
+        <div class="flex items-center gap-8" style="padding:var(--space-8) 0;border-bottom:1px solid var(--border-default);">
+          <i data-lucide="alert-triangle" style="width:16px;height:16px;color:var(--warning);"></i>
+          <span class="text-small">
+            <strong>#${x.a} ${x.an}</strong> &amp; <strong>#${x.b} ${x.bn}</strong> — ${x.d}m apart
+          </span>
+        </div>`).join('');
+      document.getElementById('dupeModal').classList.add('open');
+      lucide.createIcons();
+    }
+    function closeDupeModal() { document.getElementById('dupeModal').classList.remove('open'); }
+    document.getElementById('dupeModal').addEventListener('click', function (e) {
+      if (e.target === this) closeDupeModal();
+    });
+
+    function proceedBuild() {
+      closeDupeModal();
+      state.built = true;
+      // Seed placeholder distances so the after-build state is visible.
+      state.stops.forEach((s, i) => {
+        if (s.upDist == null) s.upDist = +(1.2 + i * 0.9).toFixed(1);
+        if (s.dnDist == null) s.dnDist = +(1.3 + i * 0.9).toFixed(1);
+      });
+      redrawMap(); renderPanel();
+      showToast('Route built. Enter distances, then Save.', 'success');
+    }
+
+    /* ---- Final Save — the ONLY server write ---- */
+    function saveRoute() {
+      state.saving = true; renderPanel();
+      setTimeout(() => {                 // simulate the commit
+        state.saving = false; renderPanel();
+        showToast('Route saved successfully.', 'success');
+      }, 1600);
+    }
+
+    /* ========================================================
+       HELPERS
+       ======================================================== */
+    function getStop(id) { return state.stops.find(s => s.id == id); }
+    function getVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+
+    // Simulated CSV upload → sample stops around Kolkata
+    function loadSampleStops(dir) {
+      const sample = [
+        ['Esplanade', 22.5645, 88.3510],
+        ['Park Street', 22.5535, 88.3520],
+        ['Rabindra Sadan', 22.5450, 88.3450],
+        ['Kalighat', 22.5200, 88.3430],
+        ['Tollygunge', 22.5010, 88.3460]
+      ];
+      state.stops = sample.map((r, i) => ({
+        id: nextId++, name: r[0], lat: r[1], lng: r[2],
+        dummy: false, congInt: false, expanded: false,
+        dnLat: dir === 'DN' ? r[1] + 0.0008 : null,
+        dnLng: dir === 'DN' ? r[2] + 0.0008 : null,
+        upDist: null, dnDist: null
+      }));
+      state.built = false;
+      map.setView([22.5330, 88.3470], 13);
+      redrawMap(); renderPanel();
+      showToast(dir + ' CSV loaded — ' + sample.length + ' stops added.', 'success');
+    }
+
+    /* ---- Fake location search (Step 3) ---- */
+    const searchInput = document.getElementById('mapSearchInput');
+    const searchResults = document.getElementById('mapSearchResults');
+    const PLACES = [
+      ['Esplanade', 22.5645, 88.3510], ['Park Street', 22.5535, 88.3520],
+      ['Salt Lake Sector V', 22.5700, 88.4330], ['Howrah Station', 22.5839, 88.3425],
+      ['Tollygunge', 22.5010, 88.3460]
+    ];
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) { searchResults.style.display = 'none'; return; }
+      const hits = PLACES.filter(p => p[0].toLowerCase().includes(q));
+      searchResults.innerHTML = hits.length
+        ? hits.map(p => `
+            <div class="map-search-result" data-lat="${p[1]}" data-lng="${p[2]}">
+              <i data-lucide="map-pin" style="width:16px;height:16px;color:var(--text-tertiary);"></i>
+              <span class="text-small">${p[0]}</span>
+            </div>`).join('')
+        : '<div class="map-search-result"><span class="text-small text-tertiary">No matches</span></div>';
+      searchResults.style.display = 'block';
+      lucide.createIcons();
+      searchResults.querySelectorAll('[data-lat]').forEach(r => {
+        r.onclick = () => {
+          map.setView([+r.dataset.lat, +r.dataset.lng], 15);
+          searchResults.style.display = 'none';
+          searchInput.value = '';
+        };
+      });
+    });
+
+    /* ---- Close the custom route dropdown on outside click ---- */
+    document.addEventListener('click', () => {
+      const menu = document.getElementById('routeMenu');
+      if (menu && menu.style.display === 'block') {
+        menu.style.display = 'none';
+        const t = document.getElementById('routeTrigger');
+        if (t) t.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    /* ---- Init ---- */
+    renderPanel();
+    lucide.createIcons();
+
+    /* If we arrived from the "Create New Route" modal on route-map.html,
+       a draft handoff is waiting in sessionStorage — prefill the details
+       and drop straight into the add-stops workspace. */
+    (function initFromDraft() {
+      try {
+        const raw = sessionStorage.getItem('routeDraft');
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        sessionStorage.removeItem('routeDraft');
+        state.details = { name: d.name, t1: d.t1 || '', t2: d.t2 || '', hours: '', from: '', till: '' };
+        enterBuildMode();
+        showToast('Draft created — click on the map to add stops.');
+      } catch (e) { /* ignore malformed handoff */ }
+    })();
+  </script>
+</body>
+</html>
