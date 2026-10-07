@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route creation mode</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .route-editor {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Secondary context bar — org + depot (tokens only; breadcrumb reused) */
+    .map-subbar {
+      flex-shrink: 0;
+      background: var(--surface-background);
+      border-bottom: 1px solid var(--border-default);
+      display: flex;
+      align-items: center;
+      padding: var(--space-24);
+    }
+    .map-subbar .breadcrumb-item i { color: var(--text-tertiary); }
+
+    /* Shared width for the left panel + its matching top-bar brand column,
+       so the vertical divider stays continuous while the panel is resized.
+       300px is the original width and the minimum (grow-only). */
+    :root { --panel-width: 300px; }
+
+    /* Left panel */
+    .route-panel {
+      width: var(--panel-width);
+      flex-shrink: 0;
+      background: var(--surface-card);
+      border-right: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-24);
+      overflow: hidden auto;
+    }
+
+    .route-panel-back {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+      text-decoration: none;
+      margin-bottom: var(--space-24);
+      transition: color 0.15s;
+    }
+    .route-panel-back:hover {
+      color: var(--text-primary);
+    }
+
+    /* Full-bleed divider under "Back to routes" (aligns with the context bar);
+       24px gap below it before the title. Negative margins cancel the 24px
+       panel padding so the line spans edge to edge. */
+    .route-panel-divider {
+      height: 1px;
+      border: none;
+      background: var(--border-default);
+      margin: 0 calc(-1 * var(--space-24)) var(--space-24);
+    }
+
+    .route-panel-title {
+      font-size: 18px;
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-24);
+    }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      margin: var(--space-24) 0;
+    }
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-default);
+    }
+    .or-divider span {
+      font-size: var(--font-small);
+      color: var(--text-tertiary);
+      font-weight: var(--weight-medium);
+    }
+
+    /* Map area — column so the context bar sits only above the map */
+    .route-map-area {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-canvas {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Leaflet makes the map container focusable; suppress the browser focus
+       outline that otherwise draws a box around the whole map after a click. */
+    #map:focus { outline: none; }
+
+    /* Plotting cursor — show a crosshair ("+") over the map instead of the
+       default grab/hand, signalling click-to-add-stop. Overrides Leaflet's
+       grab/grabbing cursors, including while the map is being dragged. */
+    #map .leaflet-grab,
+    #map.leaflet-grab,
+    #map .leaflet-interactive {
+      cursor: crosshair;
+    }
+    #map.leaflet-dragging .leaflet-grab,
+    #map.leaflet-dragging.leaflet-grab,
+    #map.leaflet-dragging .leaflet-interactive {
+      cursor: crosshair;
+    }
+
+    /* Location search overlay — top-left of the map, 24px inset.
+       Reuses the design-system .search-input (icon) + .input. */
+    .map-location-search {
+      position: absolute;
+      top: var(--space-24);
+      left: var(--space-24);
+      width: 320px;
+      z-index: 1000;
+    }
+
+    /* Resize handle on the right edge of the left sidebar. New element
+       (the DS has no resize handle) — built from tokens only. It overlays
+       the panel's border and shows a primary line on hover/drag. */
+    .panel-resize-handle {
+      flex-shrink: 0;
+      width: 6px;
+      margin: 0 -3px;
+      position: relative;
+      z-index: 500;
+      cursor: col-resize;
+    }
+    /* While the handle is hovered/dragged, recolor the existing 1px borders of
+       BOTH the top-bar brand column and the panel to primary. They sit at the
+       same x and are both 1px, so they read as one continuous highlighted line
+       (same colour + thickness) instead of a separate thicker overlay. */
+    body.panel-divider-active .top-bar-brand,
+    body.panel-divider-active .route-panel {
+      border-right-color: var(--primary);
+    }
+
+    /* A single stop row in the sidebar list (DS .input + .btn-icon). */
+    .stop-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      margin-bottom: var(--space-12);
+    }
+    /* min-width:0 lets the input shrink inside flex so the row never forces
+       a horizontal scrollbar on the panel. */
+    .stop-row .input { flex: 1; min-width: 0; }
+
+    /* Brand cell in the top bar — spans the panel's 300px column and carries
+       a right border so the vertical divider runs from the very top of the
+       header down through the panel (one continuous line). */
+    .top-bar-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      align-self: stretch;
+      width: var(--panel-width);
+      margin-left: calc(-1 * var(--space-24));
+      padding-left: var(--space-24);
+      border-right: 1px solid var(--border-default);
+    }
+  </style>
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="top-bar">
+    <!-- Logo -->
+    <div class="top-bar-brand">
+      <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+        <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+      </div>
+      <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+        Transit Console
+      </div>
+    </div>
+
+    <!-- Page title (moved here from the left panel) -->
+    <div style="font-size: var(--font-h3); font-weight: var(--weight-semibold); color: var(--text-primary);">
+      Route Creation
+    </div>
+
+    <div style="flex: 1;"></div>
+
+    <!-- Right side actions -->
+    <button class="btn-icon" title="Help">
+      <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+    </button>
+
+    <button class="btn-icon" title="Settings" aria-label="Settings">
+      <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+    </button>
+  </header>
+
+  <div class="route-editor">
+
+    <!-- Left panel -->
+    <div class="route-panel" id="routePanel">
+      <a href="flow-b-3-routes-table.html" class="route-panel-back">
+        <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+        Back to routes
+      </a>
+
+      <hr class="route-panel-divider">
+
+      <!-- Route name -->
+      <div>
+        <div class="text-caption">Route Name</div>
+        <div style="display: flex; align-items: center; gap: var(--space-8); margin-top: var(--space-4);">
+          <span class="text-h3" id="routeNameLabel">Test-Route</span>
+          <button class="btn-icon" title="Edit route name" aria-label="Edit route name" onclick="openEditRouteName()">
+            <i data-lucide="pencil" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stops list — populated as the user clicks the map (hidden until first stop) -->
+      <div id="stopsList" style="display: none; flex: 1; overflow: hidden auto;">
+        <hr class="route-panel-divider" style="margin-top: var(--space-12);">
+        <div id="stopsItems"></div>
+      </div>
+
+      <!-- Empty-stop guide — fills the middle of the panel -->
+      <div class="empty-state" id="emptyGuide" style="flex: 1; padding: var(--space-24) 0; border: none; background: transparent;">
+        <div class="empty-state-icon" style="margin-bottom: var(--space-12);">
+          <i data-lucide="map-pin" style="width: 40px; height: 40px; color: var(--text-tertiary);"></i>
+        </div>
+        <h3 class="empty-state-title" style="font-size: var(--font-h3);">Start building your route</h3>
+        <p class="empty-state-description" style="margin-bottom: 0;">
+          Plot your route visually — click anywhere on the map to drop stops one by one.
+        </p>
+
+        <!-- Or upload instead -->
+        <div class="or-divider" style="width: 100%;"><span>Or</span></div>
+
+        <p class="empty-state-description" style="margin-bottom: var(--space-12);">
+          Upload a CSV file with the lat-longs of your stops.
+        </p>
+        <a href="#" class="link-button" onclick="openCsvFormat(); return false;">
+          View CSV file format
+          <i data-lucide="arrow-up-right" class="link-button-arrow" style="width: 14px; height: 14px;"></i>
+        </a>
+      </div>
+
+      <!-- Upload CSV (secondary action, pinned to the bottom) -->
+      <button class="btn btn-secondary" style="width: 100%; justify-content: center;">
+        <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+        Upload CSV File
+      </button>
+    </div>
+
+    <!-- Drag handle to resize the left sidebar (shown only once plotting starts) -->
+    <div class="panel-resize-handle" id="panelResizeHandle" title="Drag to resize" style="display: none;"></div>
+
+    <!-- Map -->
+    <div class="route-map-area">
+      <!-- Secondary context bar: Organization › Depot (above the map only) -->
+      <div class="map-subbar">
+        <div class="breadcrumb">
+          <div class="breadcrumb-item">
+            <i data-lucide="building-2" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-link">Kolkata Metro Bus Services</span>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <i data-lucide="warehouse" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-link">Salt Lake Depot</span>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <i data-lucide="route" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-current">Test-Route</span>
+          </div>
+        </div>
+      </div>
+      <div class="map-canvas">
+        <!-- Location search (design-system .search-input) -->
+        <div class="map-location-search">
+          <div class="search-input">
+            <input type="text" id="mapSearchInput" class="input"
+                   placeholder="Search location..." autocomplete="off" />
+          </div>
+        </div>
+        <div id="map"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       CREATE NEW ROUTE — details modal (reuses .modal component)
+       ============================================================ -->
+  <div class="modal-overlay" id="createRouteModal">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header" style="flex-direction: column; align-items: stretch; position: relative;">
+        <h2 class="modal-title">Create New Route</h2>
+        <p class="text-small" style="margin-top: var(--space-4);">Set up the route details before adding stops.</p>
+        <button class="btn-icon" onclick="closeCreateRoute()" aria-label="Close"
+                style="position: absolute; top: var(--space-16); right: var(--space-16);">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="return false;" autocomplete="off">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="cr-name">Route name</label>
+            <input type="text" id="cr-name" class="input" placeholder="e.g., Route 12" />
+            <span class="form-helper" id="cr-h-name">A short, recognizable name for this route.</span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCreateRoute()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateRoute()">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CSV FILE FORMAT — help modal (reuses .modal + .table)
+       ============================================================ -->
+  <div class="modal-overlay" id="csvFormatModal">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 class="modal-title">CSV file format</h2>
+        <button class="btn-icon" onclick="closeCsvFormat()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-small text-secondary" style="margin-bottom: var(--space-16);">
+          Save your stops as a <code>.csv</code> with one row per stop, in visiting order.
+          The first row must be the header shown below.
+        </p>
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr><th>sequence</th><th>stop_name</th><th>latitude</th><th>longitude</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Salt Lake Depot</td><td>22.5726</td><td>88.3639</td></tr>
+              <tr><td>2</td><td>City Centre</td><td>22.5810</td><td>88.4090</td></tr>
+              <tr><td>3</td><td>Sector V</td><td>22.5770</td><td>88.4330</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-small text-secondary" style="margin-top: var(--space-16); margin-bottom: 0;">
+          <strong>latitude</strong> and <strong>longitude</strong> are decimal degrees (WGS-84).
+          Stops are connected in ascending <strong>sequence</strong> order.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCsvFormat()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EDIT ROUTE NAME — modal (reuses .modal + .form-group)
+       ============================================================ -->
+  <div class="modal-overlay" id="editRouteNameModal">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit route name</h2>
+        <button class="btn-icon" onclick="closeEditRouteName()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="return false;" autocomplete="off">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="ern-name">Route name</label>
+            <input type="text" id="ern-name" class="input" placeholder="e.g., Route 12" />
+            <span class="form-helper" id="ern-h-name">A short, recognizable name for this route.</span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditRouteName()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditRouteName()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    lucide.createIcons();
+
+    const map = L.map('map').setView([22.5726, 88.3639], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    /* Move the +/- zoom controls to the bottom-left of the map. */
+    map.zoomControl.setPosition('bottomleft');
+
+    /* ========================================================
+       LOCATION SEARCH — geocode via OpenStreetMap Nominatim,
+       then pan/zoom the map to the first match.
+       ======================================================== */
+    const mapSearchInput = document.getElementById('mapSearchInput');
+
+    mapSearchInput.addEventListener('keydown', async function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const q = mapSearchInput.value.trim();
+      if (!q) return;
+      try {
+        const res = await fetch(
+          'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q)
+        );
+        const data = await res.json();
+        if (!data.length) return;
+        const { lat, lon } = data[0];
+        /* Just reveal the area — no marker is placed. */
+        map.setView([parseFloat(lat), parseFloat(lon)], 16);
+      } catch (err) {
+        /* Network/geocoder error — leave the map as-is. */
+      }
+    });
+
+    /* ========================================================
+       CREATE NEW ROUTE modal — draft-first (nothing saved yet)
+       ======================================================== */
+    const createRouteModal = document.getElementById('createRouteModal');
+
+    function openCreateRoute() {
+      createRouteModal.classList.add('open');
+      lucide.createIcons();
+      document.getElementById('cr-name').focus();
+    }
+    function closeCreateRoute() {
+      createRouteModal.classList.remove('open');
+    }
+    createRouteModal.addEventListener('click', function (e) {
+      if (e.target === createRouteModal) closeCreateRoute();
+    });
+
+    /* ---- CSV file format help modal ---- */
+    const csvFormatModal = document.getElementById('csvFormatModal');
+    function openCsvFormat() {
+      csvFormatModal.classList.add('open');
+      lucide.createIcons();
+    }
+    function closeCsvFormat() {
+      csvFormatModal.classList.remove('open');
+    }
+    csvFormatModal.addEventListener('click', function (e) {
+      if (e.target === csvFormatModal) closeCsvFormat();
+    });
+
+    /* ---- Edit route name modal ---- */
+    const editRouteNameModal = document.getElementById('editRouteNameModal');
+    const routeNameLabel = document.getElementById('routeNameLabel');
+    const routeBreadcrumbName = document.querySelector('.breadcrumb .breadcrumb-current');
+
+    function openEditRouteName() {
+      const input = document.getElementById('ern-name');
+      input.value = routeNameLabel.textContent.trim();
+      crFieldError('ern-name', 'ern-h-name', false, '', 'A short, recognizable name for this route.');
+      editRouteNameModal.classList.add('open');
+      lucide.createIcons();
+      input.focus();
+      input.select();
+    }
+    function closeEditRouteName() {
+      editRouteNameModal.classList.remove('open');
+    }
+    editRouteNameModal.addEventListener('click', function (e) {
+      if (e.target === editRouteNameModal) closeEditRouteName();
+    });
+    function saveEditRouteName() {
+      const v = document.getElementById('ern-name').value.trim();
+      if (!v) {
+        crFieldError('ern-name', 'ern-h-name', true, 'Route name is required.');
+        return;
+      }
+      routeNameLabel.textContent = v;
+      if (routeBreadcrumbName) routeBreadcrumbName.textContent = v;  // keep breadcrumb in sync
+      closeEditRouteName();
+    }
+
+    function crFieldError(inputId, helperId, on, msg, base) {
+      document.getElementById(inputId).classList.toggle('error', on);
+      const h = document.getElementById(helperId);
+      h.classList.toggle('error', on);
+      h.textContent = on ? msg : base;
+    }
+
+    function submitCreateRoute() {
+      const name = document.getElementById('cr-name').value.trim();
+
+      if (!name) {
+        crFieldError('cr-name', 'cr-h-name', true, 'Route name is required.');
+        return;
+      }
+      crFieldError('cr-name', 'cr-h-name', false, '', 'A short, recognizable name for this route.');
+
+      /* Nothing is persisted here — hand the route name to the add-stops
+         workspace (route-build-mode.html) via sessionStorage. */
+      sessionStorage.setItem('routeDraft', JSON.stringify({ name: name }));
+      window.location.href = 'route-build-mode.html';
+    }
+
+    /* ========================================================
+       STOP PLOTTING — click anywhere on the map to drop a stop.
+       Each stop gets a scaled location_pin.svg marker and a row in
+       the sidebar (editable name input + delete button). The empty
+       guide is hidden while at least one stop exists.
+       ======================================================== */
+    const emptyGuide = document.getElementById('emptyGuide');
+    const stopsList  = document.getElementById('stopsList');
+    const stopsItems = document.getElementById('stopsItems');
+
+    /* Scaled from the 67×76 source SVG; anchored at the pin tip (~33,54). */
+    const stopIcon = L.icon({
+      iconUrl: 'location_pin.svg',
+      iconSize: [40, 45],
+      iconAnchor: [20, 32],
+    });
+
+    let stopSeq = 0;           // only increments → unique default names
+    const stops = new Map();   // id → { marker, row }
+
+    function refreshStopsVisibility() {
+      const has = stops.size > 0;
+      emptyGuide.style.display = has ? 'none' : '';
+      stopsList.style.display  = has ? 'block' : 'none';
+      /* Resizing is only available once the user starts plotting stops.
+         Back to empty → hide the handle and restore the original width. */
+      panelResizeHandle.style.display = has ? 'block' : 'none';
+      if (!has) document.documentElement.style.setProperty('--panel-width', '300px');
+      map.invalidateSize();
+    }
+
+    function addStop(latlng) {
+      const id = 'stop-' + (++stopSeq);
+      const marker = L.marker(latlng, { icon: stopIcon }).addTo(map);
+
+      const row = document.createElement('div');
+      row.className = 'stop-row';
+      row.dataset.id = id;
+      row.innerHTML =
+        '<input type="text" class="input" value="Stop_Name_' + stopSeq + '" />' +
+        '<button class="btn-icon" title="Delete stop" aria-label="Delete stop">' +
+          '<i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>' +
+        '</button>';
+      row.querySelector('.btn-icon').addEventListener('click', function () {
+        deleteStop(id);
+      });
+      stopsItems.appendChild(row);
+
+      stops.set(id, { marker, row });
+      refreshStopsVisibility();
+      lucide.createIcons();
+    }
+
+    function deleteStop(id) {
+      const entry = stops.get(id);
+      if (!entry) return;
+      map.removeLayer(entry.marker);
+      entry.row.remove();
+      stops.delete(id);
+      refreshStopsVisibility();
+    }
+
+    map.on('click', function (e) {
+      addStop(e.latlng);
+    });
+
+    /* ========================================================
+       RESIZABLE LEFT SIDEBAR — drag the handle on its right edge.
+       ======================================================== */
+    const routePanel = document.getElementById('routePanel');
+    const panelResizeHandle = document.getElementById('panelResizeHandle');
+    /* 300px = original width = minimum (grow-only, never smaller). */
+    const PANEL_MIN = 300, PANEL_MAX = 560;
+    let resizing = false, handleHover = false;
+
+    function setDividerActive(on) {
+      document.body.classList.toggle('panel-divider-active', on);
+    }
+
+    panelResizeHandle.addEventListener('mouseenter', function () {
+      handleHover = true;
+      setDividerActive(true);
+    });
+    panelResizeHandle.addEventListener('mouseleave', function () {
+      handleHover = false;
+      if (!resizing) setDividerActive(false);
+    });
+
+    panelResizeHandle.addEventListener('mousedown', function (e) {
+      resizing = true;
+      panelResizeHandle.classList.add('dragging');
+      setDividerActive(true);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!resizing) return;
+      const left = routePanel.getBoundingClientRect().left;
+      let w = Math.round(e.clientX - left);
+      w = Math.max(PANEL_MIN, Math.min(PANEL_MAX, w));
+      /* Drive both the panel and the top-bar brand column via one variable. */
+      document.documentElement.style.setProperty('--panel-width', w + 'px');
+      map.invalidateSize();
+    });
+    document.addEventListener('mouseup', function () {
+      if (!resizing) return;
+      resizing = false;
+      panelResizeHandle.classList.remove('dragging');
+      if (!handleHover) setDividerActive(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      map.invalidateSize();
+    });
+  </script>
+</body>
+</html>

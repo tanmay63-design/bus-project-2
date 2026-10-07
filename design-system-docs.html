@@ -589,6 +589,58 @@
       </div>
     </section>
 
+    <!-- Link Button -->
+    <section class="ds-section">
+      <h2 class="text-h1 mb-24">Link Button</h2>
+      <p class="text-body text-secondary mb-32">Inline, link-styled action for use outside tables (e.g. a secondary action like “View details”). Same behavior as the Table Link — normal text by default; on hover it turns primary, gains an underline, and reveals an optional top-right arrow — but works as an <code class="text-small">&lt;a&gt;</code> or <code class="text-small">&lt;button&gt;</code> and sits at the 14px body size.</p>
+
+      <div class="component-demo">
+        <div style="display: flex; flex-direction: column; gap: var(--space-24);">
+
+          <div>
+            <div class="text-small text-secondary mb-16">Default (no hover)</div>
+            <a href="#" class="link-button">View CSV file format <i data-lucide="arrow-up-right" class="link-button-arrow" style="width: 14px; height: 14px;"></i></a>
+          </div>
+
+          <div>
+            <div class="text-small text-secondary mb-16">Hover state (forced)</div>
+            <a href="#" class="link-button" style="color: var(--primary); text-decoration: underline; text-underline-offset: 3px;">
+              View CSV file format <i data-lucide="arrow-up-right" style="width: 14px; height: 14px; opacity: 1;"></i>
+            </a>
+          </div>
+
+          <div>
+            <div class="text-small text-secondary mb-16">Without arrow</div>
+            <a href="#" class="link-button">View CSV file format</a>
+          </div>
+
+          <div>
+            <div class="text-small text-secondary mb-16">As a &lt;button&gt;</div>
+            <button type="button" class="link-button">View CSV file format <i data-lucide="arrow-up-right" class="link-button-arrow" style="width: 14px; height: 14px;"></i></button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card mt-24">
+        <div class="card-body">
+          <div class="text-h3 mb-16">Specs</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-16);">
+            <div><code class="text-small">class: link-button</code></div>
+            <div><code class="text-small">font-size: var(--font-body) (14px)</code></div>
+            <div><code class="text-small">default color: var(--text-primary)</code></div>
+            <div><code class="text-small">hover color: var(--primary)</code></div>
+            <div><code class="text-small">hover: underline, offset 3px</code></div>
+            <div><code class="text-small">icon class: link-button-arrow</code></div>
+            <div><code class="text-small">icon: arrow-up-right, 14×14px (optional)</code></div>
+            <div><code class="text-small">icon: hidden by default, slides in on hover</code></div>
+            <div><code class="text-small">font-weight: var(--weight-medium)</code></div>
+            <div><code class="text-small">elements: &lt;a&gt; or &lt;button&gt;</code></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Dropdown Menu -->
     <section class="ds-section">
       <h2 class="text-h1 mb-24">Dropdown Menu</h2>
@@ -1046,9 +1098,9 @@
                       <button class="tree-add" title="New route"><i data-lucide="plus" style="width: 11px; height: 11px;"></i></button>
                     </div>
                     <ul class="tree-children">
-                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 22 — Downtown Loop</span></div></li>
-                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 45A — Airport Express</span></div></li>
-                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 78 — City Center</span></div></li>
+                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="route" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 22 — Downtown Loop</span></div></li>
+                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="route" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 45A — Airport Express</span></div></li>
+                      <li class="tree-item"><div class="tree-row"><span class="tree-leaf-spacer"></span><i data-lucide="route" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i><span class="tree-label">Route 78 — City Center</span></div></li>
                     </ul>
                   </li>
                   <li class="tree-item">
@@ -1107,7 +1159,7 @@
             <div style="border-left: 1px solid var(--border-default); margin-left: 16px; padding-left: 8px;">
               <div class="tree-row" style="position: relative; border-radius: var(--radius-button);">
                 <span class="tree-leaf-spacer"></span>
-                <i data-lucide="map-pin" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i>
+                <i data-lucide="route" style="width: 11px; height: 11px; color: var(--text-tertiary); flex-shrink: 0;"></i>
                 <span class="tree-label">Route 22 — Downtown Loop</span>
               </div>
             </div>
@@ -1135,10 +1187,10 @@
           </div>
           <div>
             <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
-              <i data-lucide="map-pin" style="width: 16px; height: 16px; color: var(--text-tertiary);"></i>
+              <i data-lucide="route" style="width: 16px; height: 16px; color: var(--text-tertiary);"></i>
               <span class="text-h3">Level 2 — Route</span>
             </div>
-            <p class="text-small text-secondary">Leaf node. No toggle or <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">+</code>. Uses a spacer to align with parent icons. <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">map-pin</code> icon.</p>
+            <p class="text-small text-secondary">Leaf node. No toggle or <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">+</code>. Uses a spacer to align with parent icons. <code style="font-family: monospace; font-size: 14px; background: var(--surface-background); padding: 2px 4px; border-radius: 3px; border: 1px solid var(--border-default);">route</code> icon — also used for the route in breadcrumbs.</p>
           </div>
         </div>
       </div>
