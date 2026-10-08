@@ -174,16 +174,48 @@
       border-right-color: var(--primary);
     }
 
-    /* A single stop row in the sidebar list (DS .input + .btn-icon). */
+    /* A single stop row in the sidebar list (DS .badge + .input + .btn-icon). */
     .stop-row {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: var(--space-8);
       margin-bottom: var(--space-12);
     }
+    .stop-row-index {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      justify-content: center;
+      margin-top: var(--space-4);
+      border-radius: var(--radius-button);
+      font-weight: var(--weight-semibold);
+      box-shadow: inset 0 0 0 1px var(--border-default);
+    }
+    .stop-row-content {
+      flex: 1;
+      min-width: 0;
+    }
     /* min-width:0 lets the input shrink inside flex so the row never forces
        a horizontal scrollbar on the panel. */
-    .stop-row .input { flex: 1; min-width: 0; }
+    .stop-row .input { min-width: 0; }
+    .stop-coordinates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4) var(--space-8);
+      margin-top: var(--space-4);
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .stop-coordinates span {
+      white-space: nowrap;
+    }
+    .route-panel-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      flex-shrink: 0;
+    }
 
     /* Brand cell in the top bar — spans the panel's 300px column and carries
        a right border so the vertical divider runs from the very top of the
@@ -280,11 +312,16 @@
         </a>
       </div>
 
-      <!-- Upload CSV (secondary action, pinned to the bottom) -->
-      <button class="btn btn-secondary" style="width: 100%; justify-content: center;">
-        <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
-        Upload CSV File
-      </button>
+      <!-- Bottom route actions -->
+      <div class="route-panel-actions">
+        <button class="btn btn-secondary" style="width: 100%; justify-content: center;">
+          <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+          Upload CSV File
+        </button>
+        <button class="btn btn-primary" id="saveRouteButton" style="width: 100%; justify-content: center;" disabled>
+          Save Route
+        </button>
+      </div>
     </div>
 
     <!-- Drag handle to resize the left sidebar (shown only once plotting starts) -->
@@ -400,9 +437,11 @@
        ============================================================ -->
   <div class="modal-overlay" id="editRouteNameModal">
     <div class="modal" style="max-width: 460px;">
-      <div class="modal-header">
+      <div class="modal-header" style="flex-direction: column; align-items: stretch; position: relative;">
         <h2 class="modal-title">Edit route name</h2>
-        <button class="btn-icon" onclick="closeEditRouteName()" aria-label="Close">
+        <p class="text-small" style="margin-top: var(--space-4);">Update the name used to identify this route.</p>
+        <button class="btn-icon" onclick="closeEditRouteName()" aria-label="Close"
+                style="position: absolute; top: var(--space-16); right: var(--space-16);">
           <i data-lucide="x" style="width: 20px; height: 20px;"></i>
         </button>
       </div>
@@ -554,6 +593,7 @@
     const emptyGuide = document.getElementById('emptyGuide');
     const stopsList  = document.getElementById('stopsList');
     const stopsItems = document.getElementById('stopsItems');
+    const saveRouteButton = document.getElementById('saveRouteButton');
 
     /* Scaled from the 67×76 source SVG; anchored at the pin tip (~33,54). */
     const stopIcon = L.icon({
@@ -564,6 +604,9 @@
 
     let stopSeq = 0;           // only increments → unique default names
     const stops = new Map();   // id → { marker, row }
+    let routeLayer = null;
+    let routeRequestController = null;
+    let routeRequestSeq = 0;
 
     function refreshStopsVisibility() {
       const has = stops.size > 0;
@@ -572,6 +615,7 @@
       /* Resizing is only available once the user starts plotting stops.
          Back to empty → hide the handle and restore the original width. */
       panelResizeHandle.style.display = has ? 'block' : 'none';
+      saveRouteButton.disabled = stops.size < 2;
       if (!has) document.documentElement.style.setProperty('--panel-width', '300px');
       map.invalidateSize();
     }
@@ -579,12 +623,21 @@
     function addStop(latlng) {
       const id = 'stop-' + (++stopSeq);
       const marker = L.marker(latlng, { icon: stopIcon }).addTo(map);
+      const lat = latlng.lat.toFixed(6);
+      const lng = latlng.lng.toFixed(6);
 
       const row = document.createElement('div');
       row.className = 'stop-row';
       row.dataset.id = id;
       row.innerHTML =
-        '<input type="text" class="input" value="Stop_Name_' + stopSeq + '" />' +
+        '<span class="badge badge-info stop-row-index" aria-label="Stop number ' + stopSeq + '">' + stopSeq + '</span>' +
+        '<div class="stop-row-content">' +
+          '<input type="text" class="input" value="Stop_Name_' + stopSeq + '" aria-label="Stop ' + stopSeq + ' name" />' +
+          '<div class="stop-coordinates" aria-label="Stop ' + stopSeq + ' coordinates">' +
+            '<span>Lat ' + lat + '</span>' +
+            '<span>Long ' + lng + '</span>' +
+          '</div>' +
+        '</div>' +
         '<button class="btn-icon" title="Delete stop" aria-label="Delete stop">' +
           '<i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>' +
         '</button>';
@@ -594,8 +647,24 @@
       stopsItems.appendChild(row);
 
       stops.set(id, { marker, row });
+      refreshStopNumbers();
       refreshStopsVisibility();
+      updateRoadRoute();
       lucide.createIcons();
+    }
+
+    function refreshStopNumbers() {
+      stopsItems.querySelectorAll('.stop-row').forEach(function (row, index) {
+        const stopNumber = index + 1;
+        const numberLabel = row.querySelector('.stop-row-index');
+        const nameInput = row.querySelector('.input');
+        const coordinates = row.querySelector('.stop-coordinates');
+
+        numberLabel.textContent = stopNumber;
+        numberLabel.setAttribute('aria-label', 'Stop number ' + stopNumber);
+        nameInput.setAttribute('aria-label', 'Stop ' + stopNumber + ' name');
+        coordinates.setAttribute('aria-label', 'Stop ' + stopNumber + ' coordinates');
+      });
     }
 
     function deleteStop(id) {
@@ -604,7 +673,61 @@
       map.removeLayer(entry.marker);
       entry.row.remove();
       stops.delete(id);
+      refreshStopNumbers();
       refreshStopsVisibility();
+      updateRoadRoute();
+    }
+
+    function getOrderedStopLatLngs() {
+      return Array.from(stops.values()).map(function (entry) {
+        return entry.marker.getLatLng();
+      });
+    }
+
+    function clearRoadRoute() {
+      if (routeLayer) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+      }
+    }
+
+    async function updateRoadRoute() {
+      const points = getOrderedStopLatLngs();
+      const requestSeq = ++routeRequestSeq;
+
+      if (routeRequestController) routeRequestController.abort();
+      routeRequestController = null;
+
+      if (points.length < 2) {
+        clearRoadRoute();
+        return;
+      }
+
+      routeRequestController = new AbortController();
+      const coordinates = points.map(function (p) {
+        return p.lng + ',' + p.lat;
+      }).join(';');
+      const url = 'https://router.project-osrm.org/route/v1/driving/' + coordinates +
+        '?overview=full&geometries=geojson&continue_straight=false';
+
+      try {
+        const res = await fetch(url, { signal: routeRequestController.signal });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (requestSeq !== routeRequestSeq || !data.routes || !data.routes.length) return;
+
+        clearRoadRoute();
+        routeLayer = L.geoJSON(data.routes[0].geometry, {
+          style: {
+            color: '#1A56DB',
+            weight: 5,
+            opacity: 0.8
+          }
+        }).addTo(map);
+      } catch (err) {
+        if (err.name !== 'AbortError') clearRoadRoute();
+      }
     }
 
     map.on('click', function (e) {
