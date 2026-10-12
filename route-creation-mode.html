@@ -41,8 +41,8 @@
 
     /* Shared width for the left panel + its matching top-bar brand column,
        so the vertical divider stays continuous while the panel is resized.
-       300px is the original width and the minimum (grow-only). */
-    :root { --panel-width: 300px; }
+       600px is the original width and the minimum (grow-only). */
+    :root { --panel-width: 600px; }
 
     /* Left panel */
     .route-panel {
@@ -174,6 +174,22 @@
       border-right-color: var(--primary);
     }
 
+    /* Direction arrow — one per segment between two consecutive stops,
+       pointing in the travel (plotting) order. Sits on the drawn route and
+       is non-interactive so map clicks still drop stops. Chevron default
+       points east; JS rotates the badge to the segment's screen bearing. */
+    .route-arrow-badge {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1A1D23; /* --text-primary (design-system black) */
+      /* White halo so the black chevron stays legible on the black route line. */
+      filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
+    }
+    .route-arrow-badge svg { display: block; }
+
     /* A single stop row in the sidebar list (DS .badge + .input + .btn-icon). */
     .stop-row {
       display: flex;
@@ -210,6 +226,26 @@
     .stop-coordinates span {
       white-space: nowrap;
     }
+    /* Inline off-road warning inside a stop row — shown once OSRM reports the
+       stop sits away from any road. Reuses --warning (same family as
+       .badge-warning) and the .link-button primitive for the fix action. */
+    .stop-warning {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-4) var(--space-8);
+      margin-top: var(--space-8);
+      font-size: var(--font-small);
+    }
+    .stop-warning[hidden] { display: none; }
+    .stop-warning-text {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      color: var(--warning);
+    }
+    .stop-warning-text i { flex-shrink: 0; }
+    .stop-warning .link-button { font-size: var(--font-small); }
     .route-panel-actions {
       display: flex;
       flex-direction: column;
@@ -217,7 +253,7 @@
       flex-shrink: 0;
     }
 
-    /* Brand cell in the top bar — spans the panel's 300px column and carries
+    /* Brand cell in the top bar — spans the panel's 600px column and carries
        a right border so the vertical divider runs from the very top of the
        header down through the panel (one continuous line). */
     .top-bar-brand {
@@ -229,6 +265,61 @@
       margin-left: calc(-1 * var(--space-24));
       padding-left: var(--space-24);
       border-right: 1px solid var(--border-default);
+    }
+
+    /* ============================================================
+       OFF-ROAD STOP POPOVER — NEW COMPONENT (tokens only).
+       The DS has no map-anchored callout, and Leaflet's popup is the only
+       container that tracks a latlng as the map pans/zooms — so we restyle
+       its shell to the DS card surface instead of inventing a floating
+       panel. The body is composed from existing .btn / .btn-primary /
+       .btn-ghost primitives; the icon chip reuses the .badge-warning tint.
+       ============================================================ */
+    .stop-warning-popup .leaflet-popup-content-wrapper {
+      background: var(--surface-card);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-modal);
+      /* Padding lives on the wrapper (not margin on the content) so the top/
+         bottom spacing can't collapse through this padding-less container. */
+      padding: var(--space-16);
+    }
+    .stop-warning-popup .leaflet-popup-content {
+      margin: 0;
+      width: auto !important;
+      font-family: var(--font-family);
+      line-height: 1.4;
+    }
+    /* Seamless pointer: same fill as the card and NO shadow of its own — a
+       shadow here made the tip read as a detached floating diamond. */
+    .stop-warning-popup .leaflet-popup-tip {
+      background: var(--surface-card);
+      box-shadow: none;
+      width: 14px;
+      height: 14px;
+    }
+    .stop-popover-head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .stop-popover-head i {
+      flex-shrink: 0;
+      color: var(--warning);
+    }
+    .stop-popover-title {
+      font-size: var(--font-h3);
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+    }
+    .stop-popover-sub {
+      margin-top: var(--space-4);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+    }
+    .stop-popover-actions {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-16);
     }
   </style>
 </head>
@@ -600,13 +691,87 @@
       iconUrl: 'location_pin.svg',
       iconSize: [40, 45],
       iconAnchor: [20, 32],
+      popupAnchor: [0, -34], // open the warning popover just above the pin tip
     });
 
     let stopSeq = 0;           // only increments → unique default names
     const stops = new Map();   // id → { marker, row }
     let routeLayer = null;
+    let arrowLayer = null;
     let routeRequestController = null;
     let routeRequestSeq = 0;
+
+    /* Chevron badge pointing east by default; rotated to the segment bearing. */
+    function arrowIcon(angle) {
+      return L.divIcon({
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        html:
+          '<div class="route-arrow-badge" style="transform: rotate(' + angle + 'deg);">' +
+            '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+            'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+            '<polyline points="5 6 11 12 5 18"></polyline>' +
+            '<polyline points="12 6 18 12 12 18"></polyline></svg>' +
+          '</div>',
+      });
+    }
+
+    /* Point halfway along a leg (by path length), plus the two coords around
+       it so the travel direction can be read. coords are OSRM [lng, lat]. */
+    function legMidpoint(coords) {
+      const segLen = [];
+      let total = 0;
+      for (let i = 1; i < coords.length; i++) {
+        const dx = coords[i][0] - coords[i - 1][0];
+        const dy = coords[i][1] - coords[i - 1][1];
+        const d = Math.sqrt(dx * dx + dy * dy);
+        segLen.push(d);
+        total += d;
+      }
+      const half = total / 2;
+      let acc = 0, i = 1;
+      for (; i < coords.length - 1; i++) {
+        if (acc + segLen[i - 1] >= half) break;
+        acc += segLen[i - 1];
+      }
+      const a = coords[i - 1], b = coords[i];
+      const seg = segLen[i - 1] || 0;
+      const t = seg ? (half - acc) / seg : 0;
+      return {
+        latlng: L.latLng(a[1] + (b[1] - a[1]) * t, a[0] + (b[0] - a[0]) * t),
+        a: L.latLng(a[1], a[0]),
+        b: L.latLng(b[1], b[0]),
+      };
+    }
+
+    function clearArrows() {
+      if (arrowLayer) {
+        map.removeLayer(arrowLayer);
+        arrowLayer = null;
+      }
+    }
+
+    function drawLegArrows(legs) {
+      clearArrows();
+      const markers = [];
+      (legs || []).forEach(function (leg) {
+        let coords = [];
+        (leg.steps || []).forEach(function (step) {
+          if (step.geometry && step.geometry.coordinates) {
+            coords = coords.concat(step.geometry.coordinates);
+          }
+        });
+        if (coords.length < 2) return;
+        const mid = legMidpoint(coords);
+        /* Screen-space bearing (y grows downward) — chevron points east at 0. */
+        const p1 = map.latLngToLayerPoint(mid.a);
+        const p2 = map.latLngToLayerPoint(mid.b);
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+        markers.push(L.marker(mid.latlng, { icon: arrowIcon(angle), interactive: false }));
+      });
+      if (markers.length) arrowLayer = L.layerGroup(markers).addTo(map);
+    }
 
     function refreshStopsVisibility() {
       const has = stops.size > 0;
@@ -616,7 +781,7 @@
          Back to empty → hide the handle and restore the original width. */
       panelResizeHandle.style.display = has ? 'block' : 'none';
       saveRouteButton.disabled = stops.size < 2;
-      if (!has) document.documentElement.style.setProperty('--panel-width', '300px');
+      if (!has) document.documentElement.style.setProperty('--panel-width', '600px');
       map.invalidateSize();
     }
 
@@ -637,6 +802,13 @@
             '<span>Lat ' + lat + '</span>' +
             '<span>Long ' + lng + '</span>' +
           '</div>' +
+          '<div class="stop-warning" hidden>' +
+            '<span class="stop-warning-text">' +
+              '<i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i>' +
+              '<span class="stop-warning-msg">Not on a road.</span>' +
+            '</span>' +
+            '<button type="button" class="link-button stop-warning-fix">Move to road</button>' +
+          '</div>' +
         '</div>' +
         '<button class="btn-icon" title="Delete stop" aria-label="Delete stop">' +
           '<i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>' +
@@ -644,13 +816,19 @@
       row.querySelector('.btn-icon').addEventListener('click', function () {
         deleteStop(id);
       });
+      row.querySelector('.stop-warning-fix').addEventListener('click', function () {
+        snapStopToRoad(id);
+      });
       stopsItems.appendChild(row);
 
-      stops.set(id, { marker, row });
+      stops.set(id, { marker, row, flagged: false, snapTarget: null, offRoadDistance: null });
       refreshStopNumbers();
       refreshStopsVisibility();
-      updateRoadRoute();
       lucide.createIcons();
+
+      /* Validate this placement when the next /route response lands. */
+      pendingPopupStopId = id;
+      updateRoadRoute();
     }
 
     function refreshStopNumbers() {
@@ -678,10 +856,114 @@
       updateRoadRoute();
     }
 
-    function getOrderedStopLatLngs() {
-      return Array.from(stops.values()).map(function (entry) {
-        return entry.marker.getLatLng();
+    /* ========================================================
+       OFF-ROAD VALIDATION — derived from the SAME /route response we already
+       fetch to draw the line. OSRM returns a `waypoints` array (one per stop,
+       in order) where each carries `distance` (metres the stop was snapped to
+       reach a road) and `location` (the snapped point). Beyond the tolerance
+       the stop is flagged (warning badge + inline note) and a map popover
+       offers to move it onto the nearest road. Snapping is always the user's
+       choice — a stop is never moved automatically.
+       ======================================================== */
+    const OFFROAD_TOLERANCE_M = 25;
+    let pendingPopupStopId = null;   // stop just placed → auto-open its popover if flagged
+
+    function applyOffRoadValidation(waypoints) {
+      if (!waypoints) return;
+      /* stops is a Map — keys() and the coordinates sent to OSRM share order. */
+      Array.from(stops.keys()).forEach(function (id, i) {
+        const entry = stops.get(id);
+        const wp = waypoints[i];
+        if (!entry || !wp) return;
+
+        if (typeof wp.distance === 'number' && wp.distance > OFFROAD_TOLERANCE_M) {
+          entry.snapTarget = L.latLng(wp.location[1], wp.location[0]);
+          entry.offRoadDistance = Math.round(wp.distance);
+          setStopFlagged(id, true);
+        } else {
+          entry.snapTarget = null;
+          entry.offRoadDistance = null;
+          setStopFlagged(id, false);
+        }
       });
+
+      /* Surface the popover only for the stop the user just dropped. */
+      if (pendingPopupStopId) {
+        const entry = stops.get(pendingPopupStopId);
+        if (entry && entry.flagged) openStopWarningPopup(pendingPopupStopId);
+        pendingPopupStopId = null;
+      }
+    }
+
+    function setStopFlagged(id, on) {
+      const entry = stops.get(id);
+      if (!entry) return;
+      entry.flagged = on;
+
+      const badge = entry.row.querySelector('.stop-row-index');
+      badge.classList.toggle('badge-warning', on);
+      badge.classList.toggle('badge-info', !on);
+
+      const warn = entry.row.querySelector('.stop-warning');
+      warn.hidden = !on;
+      if (on) {
+        warn.querySelector('.stop-warning-msg').textContent =
+          'About ' + entry.offRoadDistance + ' m from the nearest road.';
+      }
+    }
+
+    function openStopWarningPopup(id) {
+      const entry = stops.get(id);
+      if (!entry) return;
+
+      const html =
+        '<div class="stop-popover">' +
+          '<div class="stop-popover-head">' +
+            '<i data-lucide="alert-triangle" style="width: 20px; height: 20px;"></i>' +
+            '<span class="stop-popover-title">Stop isn\'t on a road</span>' +
+          '</div>' +
+          '<div class="stop-popover-sub">About ' + entry.offRoadDistance +
+            ' m from the nearest road. A bus can\'t stop here.</div>' +
+          '<div class="stop-popover-actions">' +
+            '<button type="button" class="btn btn-primary stop-popover-move">' +
+              '<i data-lucide="route" style="width: 16px; height: 16px;"></i>' +
+              'Move to nearest road</button>' +
+          '</div>' +
+        '</div>';
+
+      entry.marker
+        .bindPopup(html, {
+          className: 'stop-warning-popup',
+          closeButton: false,
+          offset: [0, 0],
+          maxWidth: 260,
+          autoPanPadding: [24, 24],
+        })
+        .openPopup();
+      lucide.createIcons();
+
+      const el = entry.marker.getPopup().getElement();
+      el.querySelector('.stop-popover-move').addEventListener('click', function () {
+        snapStopToRoad(id);
+      });
+    }
+
+    function snapStopToRoad(id) {
+      const entry = stops.get(id);
+      if (!entry || !entry.snapTarget) return;
+
+      const target = entry.snapTarget;
+      entry.marker.setLatLng(target);
+
+      const coords = entry.row.querySelector('.stop-coordinates');
+      coords.children[0].textContent = 'Lat ' + target.lat.toFixed(6);
+      coords.children[1].textContent = 'Long ' + target.lng.toFixed(6);
+
+      entry.snapTarget = null;
+      entry.offRoadDistance = null;
+      setStopFlagged(id, false);
+      entry.marker.closePopup();
+      updateRoadRoute();
     }
 
     function clearRoadRoute() {
@@ -691,42 +973,79 @@
       }
     }
 
+    function routeUrl(latlngs) {
+      const coordinates = latlngs.map(function (p) {
+        return p.lng + ',' + p.lat;
+      }).join(';');
+      return 'https://router.project-osrm.org/route/v1/driving/' + coordinates +
+        '?overview=full&geometries=geojson&steps=true&continue_straight=false';
+    }
+
+    function drawRoute(data) {
+      clearRoadRoute();
+      routeLayer = L.geoJSON(data.routes[0].geometry, {
+        style: {
+          color: '#1A1D23', /* --text-primary (design-system black) */
+          weight: 5,
+          opacity: 0.8
+        }
+      }).addTo(map);
+      drawLegArrows(data.routes[0].legs);
+    }
+
     async function updateRoadRoute() {
-      const points = getOrderedStopLatLngs();
+      const ordered = Array.from(stops.entries()).map(function (e) {
+        return { id: e[0], latlng: e[1].marker.getLatLng() };
+      });
       const requestSeq = ++routeRequestSeq;
 
       if (routeRequestController) routeRequestController.abort();
-      routeRequestController = null;
+      routeRequestController = new AbortController();
+      const signal = routeRequestController.signal;
 
-      if (points.length < 2) {
+      if (ordered.length < 2) {
         clearRoadRoute();
+        clearArrows();
+        pendingPopupStopId = null;   // nothing to route/validate yet
         return;
       }
 
-      routeRequestController = new AbortController();
-      const coordinates = points.map(function (p) {
-        return p.lng + ',' + p.lat;
-      }).join(';');
-      const url = 'https://router.project-osrm.org/route/v1/driving/' + coordinates +
-        '?overview=full&geometries=geojson&continue_straight=false';
-
       try {
-        const res = await fetch(url, { signal: routeRequestController.signal });
+        /* Pass 1 — route through ALL stops, used only to read how far each was
+           snapped (validation). Its geometry is intentionally NOT drawn, since
+           it would connect to off-road stops at their snapped points. */
+        const res = await fetch(routeUrl(ordered.map(function (o) { return o.latlng; })), { signal: signal });
         if (!res.ok) return;
-
         const data = await res.json();
         if (requestSeq !== routeRequestSeq || !data.routes || !data.routes.length) return;
 
-        clearRoadRoute();
-        routeLayer = L.geoJSON(data.routes[0].geometry, {
-          style: {
-            color: '#1A56DB',
-            weight: 5,
-            opacity: 0.8
-          }
-        }).addTo(map);
+        applyOffRoadValidation(data.waypoints);
+
+        /* The drawn line connects only on-road stops, in order — a flagged
+           stop stays a lone pin until the user moves it onto a road. */
+        const onRoad = ordered.filter(function (o) {
+          const entry = stops.get(o.id);
+          return entry && !entry.flagged;
+        });
+
+        if (onRoad.length === ordered.length) {
+          drawRoute(data);                      // nothing flagged → reuse pass 1
+        } else if (onRoad.length >= 2) {
+          /* Pass 2 — clean route through valid stops only. */
+          const res2 = await fetch(routeUrl(onRoad.map(function (o) { return o.latlng; })), { signal: signal });
+          if (!res2.ok) return;
+          const data2 = await res2.json();
+          if (requestSeq !== routeRequestSeq || !data2.routes || !data2.routes.length) return;
+          drawRoute(data2);
+        } else {
+          clearRoadRoute();                     // fewer than 2 valid stops → no line
+          clearArrows();
+        }
       } catch (err) {
-        if (err.name !== 'AbortError') clearRoadRoute();
+        if (err.name !== 'AbortError') {
+          clearRoadRoute();
+          clearArrows();
+        }
       }
     }
 
@@ -739,8 +1058,8 @@
        ======================================================== */
     const routePanel = document.getElementById('routePanel');
     const panelResizeHandle = document.getElementById('panelResizeHandle');
-    /* 300px = original width = minimum (grow-only, never smaller). */
-    const PANEL_MIN = 300, PANEL_MAX = 560;
+    /* 600px = original width = minimum (grow-only, never smaller). */
+    const PANEL_MIN = 600, PANEL_MAX = 860;
     let resizing = false, handleHover = false;
 
     function setDividerActive(on) {
