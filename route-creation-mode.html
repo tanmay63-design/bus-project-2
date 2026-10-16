@@ -190,19 +190,59 @@
     }
     .route-arrow-badge svg { display: block; }
 
+    /* Per-segment distance pill on the map — NEW element (the DS has no
+       map label), composed from tokens only. Sits at the leg midpoint, lifted
+       above the direction chevron so the two don't overlap. Reuses the card
+       surface + card shadow so it reads as a floating DS chip; translate centers
+       it over the point (-50% X) and lifts it clear of the 30px chevron (-20px). */
+    .route-distance-marker { width: auto !important; height: auto !important; }
+    .route-distance-badge {
+      display: inline-flex;
+      align-items: center;
+      transform: translate(-50%, calc(-100% - 20px));
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-card);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: var(--font-small);
+      font-weight: var(--weight-medium);
+      line-height: 1;
+      white-space: nowrap;
+      border-radius: var(--radius-button);
+      box-shadow: var(--shadow-card);
+    }
+
     /* A single stop row in the sidebar list (DS .badge + .input + .btn-icon). */
     .stop-row {
       display: flex;
-      align-items: flex-start;
+      align-items: stretch;
       gap: var(--space-8);
-      margin-bottom: var(--space-12);
+      /* Padding (not margin) under the row so the route line can run through the
+         gap unbroken into the next stop's badge. */
+      padding-bottom: var(--space-12);
     }
+    /* Marker column — the badge stacked over a vertical "route line" that grows
+       to fill the row, linking this stop's number down into the next one's so
+       the list reads as one continuous bus route. */
+    .stop-row-marker {
+      flex: 0 0 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .stop-row-line {
+      width: 2px;
+      flex: 1 1 auto;
+      min-height: var(--space-12);
+      background: var(--border-default);
+    }
+    /* Last stop is the end of the line — no trailing segment below it. */
+    .stop-row.is-last .stop-row-line { display: none; }
     .stop-row-index {
       width: 32px;
       height: 32px;
       flex: 0 0 32px;
       justify-content: center;
-      margin-top: var(--space-4);
       border-radius: var(--radius-button);
       font-weight: var(--weight-semibold);
       box-shadow: inset 0 0 0 1px var(--border-default);
@@ -210,6 +250,10 @@
     .stop-row-content {
       flex: 1;
       min-width: 0;
+    }
+    /* Keep the delete button at the row top (the row stretches for the line). */
+    .stop-row > .btn-icon {
+      align-self: flex-start;
     }
     /* min-width:0 lets the input shrink inside flex so the row never forces
        a horizontal scrollbar on the panel. */
@@ -226,6 +270,20 @@
     .stop-coordinates span {
       white-space: nowrap;
     }
+    /* Road distance to the NEXT stop — sits at the bottom of a stop's content,
+       alongside the route line in the gap before the next badge. NEW element
+       (tokens only); the small arrow signals travel direction down the route. */
+    .stop-distance {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-top: var(--space-8);
+      font-size: var(--font-small);
+      font-weight: var(--weight-medium);
+      color: var(--text-secondary);
+    }
+    .stop-distance[hidden] { display: none; }
+    .stop-distance i { color: var(--text-tertiary); }
     /* Inline off-road warning inside a stop row — shown once OSRM reports the
        stop sits away from any road. Reuses --warning (same family as
        .badge-warning) and the .link-button primitive for the fix action. */
@@ -717,6 +775,23 @@
       });
     }
 
+    /* Metres → short human label: "650 m" under 1 km, else "1.2 km". */
+    function formatDistance(m) {
+      if (typeof m !== 'number') return '';
+      if (m < 1000) return Math.round(m) + ' m';
+      return (m / 1000).toFixed(1) + ' km';
+    }
+
+    /* Floating distance pill dropped at a leg midpoint (centered + lifted in CSS). */
+    function distanceIcon(text) {
+      return L.divIcon({
+        className: 'route-distance-marker',
+        iconSize: null,
+        iconAnchor: [0, 0],
+        html: '<span class="route-distance-badge">' + text + '</span>',
+      });
+    }
+
     /* Point halfway along a leg (by path length), plus the two coords around
        it so the travel direction can be read. coords are OSRM [lng, lat]. */
     function legMidpoint(coords) {
@@ -769,6 +844,11 @@
         const p2 = map.latLngToLayerPoint(mid.b);
         const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
         markers.push(L.marker(mid.latlng, { icon: arrowIcon(angle), interactive: false }));
+        /* Distance pill for this segment, sitting just above the chevron. */
+        const label = formatDistance(leg.distance);
+        if (label) {
+          markers.push(L.marker(mid.latlng, { icon: distanceIcon(label), interactive: false }));
+        }
       });
       if (markers.length) arrowLayer = L.layerGroup(markers).addTo(map);
     }
@@ -795,12 +875,19 @@
       row.className = 'stop-row';
       row.dataset.id = id;
       row.innerHTML =
-        '<span class="badge badge-info stop-row-index" aria-label="Stop number ' + stopSeq + '">' + stopSeq + '</span>' +
+        '<div class="stop-row-marker">' +
+          '<span class="badge badge-info stop-row-index" aria-label="Stop number ' + stopSeq + '">' + stopSeq + '</span>' +
+          '<span class="stop-row-line" aria-hidden="true"></span>' +
+        '</div>' +
         '<div class="stop-row-content">' +
           '<input type="text" class="input" value="Stop_Name_' + stopSeq + '" aria-label="Stop ' + stopSeq + ' name" />' +
           '<div class="stop-coordinates" aria-label="Stop ' + stopSeq + ' coordinates">' +
             '<span>Lat ' + lat + '</span>' +
             '<span>Long ' + lng + '</span>' +
+          '</div>' +
+          '<div class="stop-distance" hidden aria-label="Distance to next stop">' +
+            '<i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i>' +
+            '<span class="stop-distance-value"></span>' +
           '</div>' +
           '<div class="stop-warning" hidden>' +
             '<span class="stop-warning-text">' +
@@ -832,7 +919,7 @@
     }
 
     function refreshStopNumbers() {
-      stopsItems.querySelectorAll('.stop-row').forEach(function (row, index) {
+      stopsItems.querySelectorAll('.stop-row').forEach(function (row, index, all) {
         const stopNumber = index + 1;
         const numberLabel = row.querySelector('.stop-row-index');
         const nameInput = row.querySelector('.input');
@@ -842,6 +929,8 @@
         numberLabel.setAttribute('aria-label', 'Stop number ' + stopNumber);
         nameInput.setAttribute('aria-label', 'Stop ' + stopNumber + ' name');
         coordinates.setAttribute('aria-label', 'Stop ' + stopNumber + ' coordinates');
+        /* Last stop ends the route line (no segment drawn below it). */
+        row.classList.toggle('is-last', index === all.length - 1);
       });
     }
 
@@ -973,6 +1062,50 @@
       }
     }
 
+    /* ========================================================
+       STOP-TO-STOP DISTANCES — read straight from the OSRM `legs` of the route
+       we already drew (leg[i] = the road distance from drawn stop i to i+1), so
+       no extra request. Stored on each stop as the distance to the NEXT one,
+       then surfaced as a timeline connector in the sidebar.
+       ======================================================== */
+    function applyStopDistances(usedStops, legs) {
+      stops.forEach(function (e) { e.nextDistance = null; });
+      (legs || []).forEach(function (leg, i) {
+        const from = usedStops[i];
+        const entry = from && stops.get(from.id);
+        if (entry) entry.nextDistance = leg.distance;
+      });
+      renderDistances();
+    }
+
+    function renderDistances() {
+      const rows = Array.from(stopsItems.querySelectorAll('.stop-row'));
+      rows.forEach(function (row, i) {
+        const el = row.querySelector('.stop-distance');
+        if (!el) return;
+        const entry = stops.get(row.dataset.id);
+        const nextEntry = rows[i + 1] ? stops.get(rows[i + 1].dataset.id) : null;
+        /* Label the segment only when both ends are on-road (a flagged stop
+           breaks the connection) and a distance has actually been computed. */
+        if (entry && nextEntry && !entry.flagged && !nextEntry.flagged &&
+            typeof entry.nextDistance === 'number') {
+          el.querySelector('.stop-distance-value').textContent = formatDistance(entry.nextDistance);
+          el.hidden = false;
+        } else {
+          el.querySelector('.stop-distance-value').textContent = '';
+          el.hidden = true;
+        }
+      });
+    }
+
+    function clearDistances() {
+      stops.forEach(function (e) { e.nextDistance = null; });
+      stopsItems.querySelectorAll('.stop-distance').forEach(function (el) {
+        el.querySelector('.stop-distance-value').textContent = '';
+        el.hidden = true;
+      });
+    }
+
     function routeUrl(latlngs) {
       const coordinates = latlngs.map(function (p) {
         return p.lng + ',' + p.lat;
@@ -1006,6 +1139,7 @@
       if (ordered.length < 2) {
         clearRoadRoute();
         clearArrows();
+        clearDistances();
         pendingPopupStopId = null;   // nothing to route/validate yet
         return;
       }
@@ -1030,6 +1164,7 @@
 
         if (onRoad.length === ordered.length) {
           drawRoute(data);                      // nothing flagged → reuse pass 1
+          applyStopDistances(ordered, data.routes[0].legs);
         } else if (onRoad.length >= 2) {
           /* Pass 2 — clean route through valid stops only. */
           const res2 = await fetch(routeUrl(onRoad.map(function (o) { return o.latlng; })), { signal: signal });
@@ -1037,14 +1172,17 @@
           const data2 = await res2.json();
           if (requestSeq !== routeRequestSeq || !data2.routes || !data2.routes.length) return;
           drawRoute(data2);
+          applyStopDistances(onRoad, data2.routes[0].legs);
         } else {
           clearRoadRoute();                     // fewer than 2 valid stops → no line
           clearArrows();
+          clearDistances();
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
           clearRoadRoute();
           clearArrows();
+          clearDistances();
         }
       }
     }
