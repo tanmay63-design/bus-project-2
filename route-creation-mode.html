@@ -218,9 +218,20 @@
       align-items: stretch;
       gap: var(--space-8);
       /* Padding (not margin) under the row so the route line can run through the
-         gap unbroken into the next stop's badge. */
-      padding-bottom: var(--space-12);
+         gap unbroken into the next stop's badge. Horizontal padding + a matching
+         negative margin give the hover/selected tint breathing room without
+         shifting the content (the 24px panel padding absorbs the overflow). */
+      padding: 0 var(--space-8) var(--space-12);
+      margin: 0 calc(-1 * var(--space-8));
+      border-radius: var(--radius-card);
+      cursor: pointer;
+      transition: background-color var(--transition-fast);
     }
+    /* Row ↔ map pin selection, mirroring .table tbody tr.selected (primary @5%). */
+    .stop-row:hover:not(.selected) { background-color: var(--surface-background); }
+    .stop-row.selected { background-color: rgba(26, 86, 219, 0.05); }
+    /* The name field stays a text field — keep its caret cursor, not the row's. */
+    .stop-row .input { cursor: text; }
     /* Marker column — the badge stacked over a vertical "route line" that grows
        to fill the row, linking this stop's number down into the next one's so
        the list reads as one continuous bus route. */
@@ -379,6 +390,50 @@
       gap: var(--space-8);
       margin-top: var(--space-16);
     }
+
+    /* ============================================================
+       STOP INFO TOOLTIP + SELECTED PIN — NEW (tokens only).
+       Hovering or clicking a stop (on the map or in the sidebar) shows its
+       name / number / coordinates. Leaflet's tooltip is the only container
+       that tracks a latlng as the map pans/zooms, so — as with the off-road
+       popover above — we restyle its shell to the DS card surface rather than
+       invent a floating panel. The selected pin reuses the same
+       location_pin.svg, enlarged with a primary glow to read as "selected".
+       ============================================================ */
+    .stop-info-tooltip.leaflet-tooltip {
+      background: var(--surface-card);
+      border: none;
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: var(--space-12);
+      font-family: var(--font-family);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    /* Recolor Leaflet's little tooltip pointer to match the card surface. */
+    .stop-info-tooltip.leaflet-tooltip-top::before    { border-top-color: var(--surface-card); }
+    .stop-info-tooltip.leaflet-tooltip-bottom::before { border-bottom-color: var(--surface-card); }
+    .stop-info-tooltip.leaflet-tooltip-left::before   { border-left-color: var(--surface-card); }
+    .stop-info-tooltip.leaflet-tooltip-right::before  { border-right-color: var(--surface-card); }
+    .stop-info-name {
+      font-size: var(--font-body);
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+    }
+    .stop-info-meta {
+      margin-top: var(--space-4);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+    }
+    .stop-info-coords {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-4);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+    }
+    /* Selected map pin — primary glow on the existing SVG marker. */
+    .stop-marker-selected { filter: drop-shadow(0 2px 6px rgba(26, 86, 219, 0.5)); }
   </style>
 </head>
 <body>
@@ -751,9 +806,20 @@
       iconAnchor: [20, 32],
       popupAnchor: [0, -34], // open the warning popover just above the pin tip
     });
+    /* Selected variant — same SVG, 1.2× larger with a primary glow (see
+       .stop-marker-selected). Anchor keeps the same tip ratios so the pin
+       stays pinned to its latlng when swapped in. */
+    const stopIconSelected = L.icon({
+      iconUrl: 'location_pin.svg',
+      iconSize: [48, 54],
+      iconAnchor: [24, 38],
+      popupAnchor: [0, -40],
+      className: 'stop-marker-selected',
+    });
 
     let stopSeq = 0;           // only increments → unique default names
     const stops = new Map();   // id → { marker, row }
+    let selectedStopId = null; // the stop currently selected (map pin + sidebar row)
     let routeLayer = null;
     let arrowLayer = null;
     let routeRequestController = null;
@@ -866,6 +932,8 @@
     }
 
     function addStop(latlng) {
+      /* Dropping a new stop starts a fresh plot — drop any previous selection. */
+      clearSelection();
       const id = 'stop-' + (++stopSeq);
       const marker = L.marker(latlng, { icon: stopIcon }).addTo(map);
       const lat = latlng.lat.toFixed(6);
@@ -906,6 +974,32 @@
       row.querySelector('.stop-warning-fix').addEventListener('click', function () {
         snapStopToRoad(id);
       });
+
+      /* Hover info tooltip (name / number / coords). Content is a function so it
+         always reflects the live name, number and snapped coordinates. */
+      marker.bindTooltip(function () { return stopTooltipHtml(id); }, {
+        className: 'stop-info-tooltip',
+        direction: 'top',
+        offset: [0, -34],
+        opacity: 1,
+      });
+      /* Click the pin → select this stop. */
+      marker.on('click', function () { selectStop(id); });
+
+      /* Sidebar row: hover previews the pin's tooltip; clicking selects the
+         stop (ignoring clicks on the name field and the row's buttons). */
+      row.addEventListener('mouseenter', function () {
+        if (selectedStopId !== id) marker.openTooltip();
+      });
+      row.addEventListener('mouseleave', function () {
+        if (selectedStopId !== id) marker.closeTooltip();
+      });
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('button') || e.target.closest('.input')) return;
+        selectStop(id);
+        map.panTo(marker.getLatLng());
+      });
+
       stopsItems.appendChild(row);
 
       stops.set(id, { marker, row, flagged: false, snapTarget: null, offRoadDistance: null });
@@ -934,9 +1028,64 @@
       });
     }
 
+    /* ========================================================
+       STOP SELECTION — clicking a pin or a sidebar row selects that stop:
+       the pin swaps to the enlarged/glowing icon, the row is highlighted, and
+       an info tooltip (name / number / coords) is shown. Hovering shows the
+       same tooltip without selecting.
+       ======================================================== */
+    function escapeHtml(s) {
+      return s.replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    /* 1-based position of a stop in the current (DOM) order. */
+    function stopNumber(id) {
+      const rows = Array.from(stopsItems.querySelectorAll('.stop-row'));
+      return rows.findIndex(function (r) { return r.dataset.id === id; }) + 1;
+    }
+
+    function stopTooltipHtml(id) {
+      const entry = stops.get(id);
+      if (!entry) return '';
+      const num = stopNumber(id);
+      const name = entry.row.querySelector('.input').value.trim() || ('Stop ' + num);
+      const ll = entry.marker.getLatLng();
+      return '<div class="stop-info-name">' + escapeHtml(name) + '</div>' +
+        '<div class="stop-info-meta">Stop ' + num + '</div>' +
+        '<div class="stop-info-coords">' +
+          '<span>Lat ' + ll.lat.toFixed(6) + '</span>' +
+          '<span>Long ' + ll.lng.toFixed(6) + '</span>' +
+        '</div>';
+    }
+
+    function selectStop(id) {
+      const entry = stops.get(id);
+      if (!entry) return;
+      if (selectedStopId && selectedStopId !== id) clearSelection();
+      selectedStopId = id;
+      entry.marker.setIcon(stopIconSelected);
+      entry.row.classList.add('selected');
+      entry.row.scrollIntoView({ block: 'nearest' });
+      entry.marker.openTooltip();
+    }
+
+    function clearSelection() {
+      if (!selectedStopId) return;
+      const entry = stops.get(selectedStopId);
+      if (entry) {
+        entry.marker.setIcon(stopIcon);
+        entry.marker.closeTooltip();
+        entry.row.classList.remove('selected');
+      }
+      selectedStopId = null;
+    }
+
     function deleteStop(id) {
       const entry = stops.get(id);
       if (!entry) return;
+      if (selectedStopId === id) selectedStopId = null;  // marker/row go away below
       map.removeLayer(entry.marker);
       entry.row.remove();
       stops.delete(id);
