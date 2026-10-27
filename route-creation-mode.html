@@ -143,6 +143,12 @@
     #map.leaflet-dragging .leaflet-interactive {
       cursor: crosshair;
     }
+    /* Over a stop pin, show the normal pointer (clicking selects it), not the
+       plotting crosshair. The extra .stop-marker class outranks the
+       #map .leaflet-interactive crosshair rule above. */
+    #map .leaflet-marker-icon.stop-marker {
+      cursor: pointer;
+    }
 
     /* Location search overlay — top-left of the map, 24px inset.
        Reuses the design-system .search-input (icon) + .input. */
@@ -218,18 +224,10 @@
       align-items: stretch;
       gap: var(--space-8);
       /* Padding (not margin) under the row so the route line can run through the
-         gap unbroken into the next stop's badge. Horizontal padding + a matching
-         negative margin give the hover/selected tint breathing room without
-         shifting the content (the 24px panel padding absorbs the overflow). */
-      padding: 0 var(--space-8) var(--space-12);
-      margin: 0 calc(-1 * var(--space-8));
-      border-radius: var(--radius-card);
-      cursor: pointer;
-      transition: background-color var(--transition-fast);
+         gap unbroken into the next stop's badge. */
+      padding-bottom: var(--space-12);
+      cursor: pointer; /* the row is clickable to select its stop on the map */
     }
-    /* Row ↔ map pin selection, mirroring .table tbody tr.selected (primary @5%). */
-    .stop-row:hover:not(.selected) { background-color: var(--surface-background); }
-    .stop-row.selected { background-color: rgba(26, 86, 219, 0.05); }
     /* The name field stays a text field — keep its caret cursor, not the row's. */
     .stop-row .input { cursor: text; }
     /* Marker column — the badge stacked over a vertical "route line" that grows
@@ -432,8 +430,74 @@
       font-size: var(--font-small);
       color: var(--text-secondary);
     }
-    /* Selected map pin — primary glow on the existing SVG marker. */
-    .stop-marker-selected { filter: drop-shadow(0 2px 6px rgba(26, 86, 219, 0.5)); }
+    /* Stop pins — hover + selected states on the existing SVG marker, both
+       drawn as a primary glow (no transform, which Leaflet uses for position).
+       Hover is a lighter glow; selected is a stronger glow (and a larger icon,
+       set in JS). Selected keeps its glow even while hovered. */
+    .stop-marker { transition: filter var(--transition-fast); }
+    .stop-marker:hover { filter: drop-shadow(var(--glow-primary-soft)); }
+    .stop-marker-selected,
+    .stop-marker-selected:hover { filter: drop-shadow(var(--glow-primary)); }
+
+    /* ============================================================
+       FLOATING MAP TOOLBAR — NEW component (tokens only). A pill of .btn-icon
+       tools (undo / redo / route color / delete) floating at the bottom-center
+       of the map. Reuses the card surface + modal shadow so it reads as a DS
+       floating surface; the buttons are the existing .btn-icon.
+       ============================================================ */
+    .map-toolbar {
+      position: absolute;
+      bottom: var(--space-24);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-button);
+      box-shadow: var(--shadow-modal);
+    }
+    /* Hairline group separator (1px is a border, not spacing). */
+    .map-toolbar-sep {
+      width: 1px;
+      align-self: stretch;
+      margin: var(--space-4) 0;
+      background: var(--border-default);
+    }
+    .map-toolbar-color { position: relative; display: flex; }
+
+    /* Color swatch popover — opens above the color button. */
+    .color-popover {
+      position: absolute;
+      bottom: calc(100% + var(--space-8));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-8);
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-modal);
+    }
+    .color-popover[hidden] { display: none; }
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px var(--border-default);
+      transition: transform var(--transition-fast);
+    }
+    .color-swatch:hover { transform: scale(1.1); }
+    /* Active = current route color: a ring in --primary with a white gap. */
+    .color-swatch.active { box-shadow: 0 0 0 2px var(--surface-card), 0 0 0 4px var(--primary); }
+    .color-swatch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   </style>
 </head>
 <body>
@@ -561,6 +625,37 @@
           </div>
         </div>
         <div id="map"></div>
+
+        <!-- Floating route toolbar (bottom-center of the map). NEW component
+             built from tokens; the four tools reuse the DS .btn-icon. -->
+        <div class="map-toolbar" id="mapToolbar" role="toolbar" aria-label="Route tools">
+          <button class="btn-icon" id="undoBtn" title="Undo" aria-label="Undo" disabled>
+            <i data-lucide="undo-2" style="width: 20px; height: 20px;"></i>
+          </button>
+          <button class="btn-icon" id="redoBtn" title="Redo" aria-label="Redo" disabled>
+            <i data-lucide="redo-2" style="width: 20px; height: 20px;"></i>
+          </button>
+          <span class="map-toolbar-sep" aria-hidden="true"></span>
+          <div class="map-toolbar-color">
+            <button class="btn-icon" id="colorBtn" title="Route color"
+                    aria-label="Change route color" aria-haspopup="true" aria-expanded="false">
+              <i data-lucide="palette" style="width: 20px; height: 20px;"></i>
+            </button>
+            <!-- Swatch popover; backgrounds reference DS color tokens -->
+            <div class="color-popover" id="colorPopover" hidden>
+              <button class="color-swatch" data-token="--text-primary" style="background: var(--text-primary);" title="Default" aria-label="Default"></button>
+              <button class="color-swatch" data-token="--primary" style="background: var(--primary);" title="Blue" aria-label="Blue"></button>
+              <button class="color-swatch" data-token="--success" style="background: var(--success);" title="Green" aria-label="Green"></button>
+              <button class="color-swatch" data-token="--warning" style="background: var(--warning);" title="Amber" aria-label="Amber"></button>
+              <button class="color-swatch" data-token="--danger" style="background: var(--danger);" title="Red" aria-label="Red"></button>
+            </div>
+          </div>
+          <span class="map-toolbar-sep" aria-hidden="true"></span>
+          <button class="btn-icon" id="deleteBtn" title="Delete selected stop"
+                  aria-label="Delete selected stop" disabled>
+            <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -805,6 +900,7 @@
       iconSize: [40, 45],
       iconAnchor: [20, 32],
       popupAnchor: [0, -34], // open the warning popover just above the pin tip
+      className: 'stop-marker',
     });
     /* Selected variant — same SVG, 1.2× larger with a primary glow (see
        .stop-marker-selected). Anchor keeps the same tip ratios so the pin
@@ -814,12 +910,21 @@
       iconSize: [48, 54],
       iconAnchor: [24, 38],
       popupAnchor: [0, -40],
-      className: 'stop-marker-selected',
+      className: 'stop-marker stop-marker-selected',
     });
 
     let stopSeq = 0;           // only increments → unique default names
     const stops = new Map();   // id → { marker, row }
     let selectedStopId = null; // the stop currently selected (map pin + sidebar row)
+
+    /* Resolve a CSS custom property to its value (needed because Leaflet paints
+       the route stroke as a literal color, not a CSS var). */
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    let routeColor = cssVar('--text-primary') || '#1A1D23'; // drawn route line color
+    const undoStack = [];      // pre-change state snapshots (see snapshotState)
+    const redoStack = [];
     let routeLayer = null;
     let arrowLayer = null;
     let routeRequestController = null;
@@ -928,28 +1033,30 @@
       panelResizeHandle.style.display = has ? 'block' : 'none';
       saveRouteButton.disabled = stops.size < 2;
       if (!has) document.documentElement.style.setProperty('--panel-width', '600px');
+      updateToolbarState();
       map.invalidateSize();
     }
 
-    function addStop(latlng) {
-      /* Dropping a new stop starts a fresh plot — drop any previous selection. */
-      clearSelection();
-      const id = 'stop-' + (++stopSeq);
+    /* Build a stop's marker + sidebar row for a known id / name / position.
+       Shared by addStop (new stops) and undo/redo (rebuilding from a snapshot);
+       it deliberately does NOT touch stopSeq or the history stacks. */
+    function createStop(id, latlng, name) {
       const marker = L.marker(latlng, { icon: stopIcon }).addTo(map);
       const lat = latlng.lat.toFixed(6);
       const lng = latlng.lng.toFixed(6);
+      const num = stops.size + 1;  // provisional — refreshStopNumbers sets the real one
 
       const row = document.createElement('div');
       row.className = 'stop-row';
       row.dataset.id = id;
       row.innerHTML =
         '<div class="stop-row-marker">' +
-          '<span class="badge badge-info stop-row-index" aria-label="Stop number ' + stopSeq + '">' + stopSeq + '</span>' +
+          '<span class="badge badge-info stop-row-index" aria-label="Stop number ' + num + '">' + num + '</span>' +
           '<span class="stop-row-line" aria-hidden="true"></span>' +
         '</div>' +
         '<div class="stop-row-content">' +
-          '<input type="text" class="input" value="Stop_Name_' + stopSeq + '" aria-label="Stop ' + stopSeq + ' name" />' +
-          '<div class="stop-coordinates" aria-label="Stop ' + stopSeq + ' coordinates">' +
+          '<input type="text" class="input" aria-label="Stop ' + num + ' name" />' +
+          '<div class="stop-coordinates" aria-label="Stop ' + num + ' coordinates">' +
             '<span>Lat ' + lat + '</span>' +
             '<span>Long ' + lng + '</span>' +
           '</div>' +
@@ -968,6 +1075,9 @@
         '<button class="btn-icon" title="Delete stop" aria-label="Delete stop">' +
           '<i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>' +
         '</button>';
+      const nameInput = row.querySelector('.input');
+      nameInput.value = name;  // set as a property to avoid HTML-escaping the name
+
       row.querySelector('.btn-icon').addEventListener('click', function () {
         deleteStop(id);
       });
@@ -975,16 +1085,22 @@
         snapStopToRoad(id);
       });
 
-      /* Hover info tooltip (name / number / coords). Content is a function so it
-         always reflects the live name, number and snapped coordinates. */
-      marker.bindTooltip(function () { return stopTooltipHtml(id); }, {
-        className: 'stop-info-tooltip',
-        direction: 'top',
-        offset: [0, -34],
-        opacity: 1,
+      /* Renaming is undoable: snapshot the pre-edit state on focus, commit it to
+         the undo stack on change only if the value actually changed. */
+      let nameBefore = null;
+      nameInput.addEventListener('focus', function () { nameBefore = snapshotState(); });
+      nameInput.addEventListener('change', function () {
+        if (nameBefore) { commitHistory(nameBefore); nameBefore = null; }
       });
-      /* Click the pin → select this stop. */
-      marker.on('click', function () { selectStop(id); });
+
+      /* Hover info tooltip (name / number / coords); becomes permanent while the
+         stop is selected (see selectStop). */
+      bindStopTooltip(marker, id, false);
+      /* Click the pin → toggle selection (click again to return to normal). */
+      marker.on('click', function () {
+        if (selectedStopId === id) clearSelection();
+        else selectStop(id);
+      });
 
       /* Sidebar row: hover previews the pin's tooltip; clicking selects the
          stop (ignoring clicks on the name field and the row's buttons). */
@@ -1001,8 +1117,16 @@
       });
 
       stopsItems.appendChild(row);
-
       stops.set(id, { marker, row, flagged: false, snapTarget: null, offRoadDistance: null });
+      return id;
+    }
+
+    function addStop(latlng) {
+      /* Dropping a new stop starts a fresh plot — drop any previous selection. */
+      clearSelection();
+      pushHistory();  // snapshot the state BEFORE adding, so this is undoable
+      const id = 'stop-' + (++stopSeq);
+      createStop(id, latlng, 'Stop_Name_' + stopSeq);
       refreshStopNumbers();
       refreshStopsVisibility();
       lucide.createIcons();
@@ -1060,31 +1184,46 @@
         '</div>';
     }
 
+    /* (Re)bind the info tooltip to a marker. Hover tooltips (permanent:false)
+       open on mouseover; while a stop is selected we rebind as permanent so the
+       tooltip can't be dismissed by the mouseout that fires when setIcon swaps
+       the pin's element. Content is a function so it stays live. */
+    const TOOLTIP_OPTS = { className: 'stop-info-tooltip', direction: 'top', offset: [0, -34], opacity: 1 };
+    function bindStopTooltip(marker, id, permanent) {
+      marker.unbindTooltip();
+      marker.bindTooltip(function () { return stopTooltipHtml(id); },
+        Object.assign({}, TOOLTIP_OPTS, { permanent: !!permanent }));
+    }
+
     function selectStop(id) {
       const entry = stops.get(id);
       if (!entry) return;
       if (selectedStopId && selectedStopId !== id) clearSelection();
       selectedStopId = id;
       entry.marker.setIcon(stopIconSelected);
-      entry.row.classList.add('selected');
-      entry.row.scrollIntoView({ block: 'nearest' });
+      /* Permanent while selected → survives the setIcon mouseout and stays up. */
+      bindStopTooltip(entry.marker, id, true);
       entry.marker.openTooltip();
+      entry.row.scrollIntoView({ block: 'nearest' });
+      updateToolbarState();  // the delete tool acts on the selected stop
     }
 
     function clearSelection() {
       if (!selectedStopId) return;
-      const entry = stops.get(selectedStopId);
+      const id = selectedStopId;
+      const entry = stops.get(id);
+      selectedStopId = null;
       if (entry) {
         entry.marker.setIcon(stopIcon);
-        entry.marker.closeTooltip();
-        entry.row.classList.remove('selected');
+        bindStopTooltip(entry.marker, id, false);  // back to a (closed) hover tooltip
       }
-      selectedStopId = null;
+      updateToolbarState();
     }
 
     function deleteStop(id) {
       const entry = stops.get(id);
       if (!entry) return;
+      pushHistory();  // snapshot BEFORE removing, so the delete is undoable
       if (selectedStopId === id) selectedStopId = null;  // marker/row go away below
       map.removeLayer(entry.marker);
       entry.row.remove();
@@ -1189,6 +1328,7 @@
     function snapStopToRoad(id) {
       const entry = stops.get(id);
       if (!entry || !entry.snapTarget) return;
+      pushHistory();  // moving the stop onto the road is undoable
 
       const target = entry.snapTarget;
       entry.marker.setLatLng(target);
@@ -1267,7 +1407,7 @@
       clearRoadRoute();
       routeLayer = L.geoJSON(data.routes[0].geometry, {
         style: {
-          color: '#1A1D23', /* --text-primary (design-system black) */
+          color: routeColor, /* set via the toolbar color picker; default --text-primary */
           weight: 5,
           opacity: 0.8
         }
@@ -1388,6 +1528,119 @@
       document.body.style.userSelect = '';
       map.invalidateSize();
     });
+
+    /* ========================================================
+       ROUTE TOOLBAR — floating undo / redo / color / delete.
+       Undo/redo work on lightweight state snapshots (each stop's id, position
+       and name, plus the route color and stop counter); restoring clears the
+       canvas, rebuilds the stops via createStop, and re-runs validation so
+       warnings/distances recompute. Mutating actions (add/delete/snap/rename/
+       recolor) push a pre-change snapshot via pushHistory before they run.
+       ======================================================== */
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const colorBtn = document.getElementById('colorBtn');
+    const colorPopover = document.getElementById('colorPopover');
+
+    function snapshotState() {
+      return {
+        seq: stopSeq,
+        stops: Array.from(stops.entries()).map(function (e) {
+          const ll = e[1].marker.getLatLng();
+          return { id: e[0], lat: ll.lat, lng: ll.lng, name: e[1].row.querySelector('.input').value };
+        }),
+      };
+    }
+
+    /* Record a pre-change snapshot; a new action invalidates the redo branch. */
+    function pushHistory() { commitHistory(snapshotState()); }
+    function commitHistory(snap) {
+      undoStack.push(snap);
+      redoStack.length = 0;
+      updateToolbarState();
+    }
+
+    function applyState(snap) {
+      clearSelection();
+      Array.from(stops.keys()).forEach(function (id) {
+        map.removeLayer(stops.get(id).marker);
+        stops.get(id).row.remove();
+      });
+      stops.clear();
+      stopSeq = snap.seq;
+      /* Route color is intentionally NOT part of history — it stays as the user
+         last set it through undo/redo. */
+      snap.stops.forEach(function (s) {
+        createStop(s.id, L.latLng(s.lat, s.lng), s.name);
+      });
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      lucide.createIcons();
+      updateRoadRoute();
+    }
+
+    function undo() {
+      if (!undoStack.length) return;
+      redoStack.push(snapshotState());
+      applyState(undoStack.pop());
+      updateToolbarState();
+    }
+    function redo() {
+      if (!redoStack.length) return;
+      undoStack.push(snapshotState());
+      applyState(redoStack.pop());
+      updateToolbarState();
+    }
+
+    function setRouteColor(color) {
+      routeColor = color;
+      if (routeLayer) routeLayer.setStyle({ color: color });  // recolor live, no refetch
+      colorPopover.querySelectorAll('.color-swatch').forEach(function (sw) {
+        sw.classList.toggle('active', cssVar(sw.dataset.token) === color);
+      });
+    }
+
+    function updateToolbarState() {
+      undoBtn.disabled = undoStack.length === 0;
+      redoBtn.disabled = redoStack.length === 0;
+      deleteBtn.disabled = !selectedStopId;
+    }
+
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+    deleteBtn.addEventListener('click', function () {
+      if (selectedStopId) deleteStop(selectedStopId);
+    });
+
+    /* Color picker popover. */
+    function toggleColorPopover(open) {
+      const show = (open === undefined) ? colorPopover.hidden : open;
+      colorPopover.hidden = !show;
+      colorBtn.setAttribute('aria-expanded', String(show));
+    }
+    colorBtn.addEventListener('click', function (e) {
+      e.stopPropagation();  // don't let the outside-click handler immediately close it
+      toggleColorPopover();
+    });
+    colorPopover.addEventListener('click', function (e) {
+      const sw = e.target.closest('.color-swatch');
+      if (!sw) return;
+      const color = cssVar(sw.dataset.token);
+      if (color && color !== routeColor) {
+        setRouteColor(color);  // color is not undoable (intentionally)
+      }
+      toggleColorPopover(false);
+    });
+    document.addEventListener('click', function (e) {
+      if (!colorPopover.hidden && !colorPopover.contains(e.target) && !colorBtn.contains(e.target)) {
+        toggleColorPopover(false);
+      }
+    });
+
+    /* Reflect the initial color + button states. */
+    setRouteColor(routeColor);
+    updateToolbarState();
   </script>
 </body>
 </html>

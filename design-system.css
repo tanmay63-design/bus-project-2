@@ -105,6 +105,11 @@ body {
   /* ===== ELEVATION ===== */
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-modal: 0 8px 24px rgba(16, 24, 40, 0.12);
+  /* Primary-tinted selection/hover glow (rgba of --primary, per the semantic
+     tint convention). Works as a box-shadow or filter: drop-shadow() — e.g. a
+     selected (strong) or hovered (soft) map pin. */
+  --glow-primary: 0 2px 6px rgba(26, 86, 219, 0.5);
+  --glow-primary-soft: 0 2px 4px rgba(26, 86, 219, 0.35);
   
   /* ===== BORDER RADIUS ===== */
   --radius-card: 8px;
