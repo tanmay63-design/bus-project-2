@@ -122,8 +122,30 @@ Toggle `.error` on both `.input` and `.form-helper` to show an error; swap the h
 Modal shell: reuse `.modal-overlay/.modal/.modal-header/.modal-body/.modal-footer` exactly as in
 existing pages; open by adding `.open` to the overlay and close on overlay-background click.
 
+## New-addition warning (ALWAYS report in chat)
+
+Whenever a change **introduces something that is not already in the design system** — a new
+token, a new component/class, a new reusable pattern, or any raw value that no token covers
+(a one-off color, shadow, radius, or an odd/ non-token spacing like `30px`) — you MUST surface
+it in your chat reply. Do not let a new DS element land silently. This applies to **inline**
+page components (e.g. a map popover/toolbar in a `.html` `<style>`) just as much as edits to
+`design-system.css` / `components.css`.
+
+End the relevant reply with a clearly marked block, one line per item:
+
+> ⚠️ **New design-system additions**
+> - `--glow-primary` (new token) — primary-tinted selection glow; no token existed. Added to `design-system.css`.
+> - `.map-toolbar` (new component, inline) — floating toolbar; built only from tokens; kept page-local per convention.
+> - `30px` bottom padding (non-token value) — not on the 4/8/…/64 scale; nearest token is `--space-32`.
+
+For each item give: **what** it is, **what kind** (token / component / pattern / non-token value),
+**why** it was unavoidable, and **where** it lives (promoted to a DS file, or kept inline). If a
+change introduced **nothing** new (pure reuse of existing tokens/components), say so in one short
+line: "No new design-system additions." Never claim DS-compliance without this check.
+
 ## Before you finish (checklist)
 
+- [ ] Ran the **New-addition warning** check and reported additions (or "No new design-system additions") in chat.
 - [ ] No hardcoded colors/spacing/radii/shadows — all `var(--token)`.
 - [ ] Every `padding`/`margin`/`gap` is an EVEN px value (tokens preferred). No 3/5/7/9/11/15px spacing. (1px borders excluded.)
 - [ ] Every font size is a `--font-*` token; nothing below 14px (except `.badge` = 12px via `--font-badge`); no odd px sizes anywhere.

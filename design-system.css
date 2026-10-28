@@ -72,7 +72,16 @@ body {
   --warning: #D97706;
   --danger: #E02424;
   --info: #1A56DB;
-  
+
+  /* Route line palette — categorical colors for drawing routes on the (light)
+     map. Chosen saturated/dark for contrast on bright OSM tiles. The route
+     color picker also reuses --text-primary, --primary, --success, --warning
+     and --danger from above. */
+  --route-indigo: #5145CD;
+  --route-violet: #7E3AF2;
+  --route-magenta: #D61F69;
+  --route-teal: #047481;
+
   /* ===== SPACING (8px grid) ===== */
   --space-4: 4px;
   --space-8: 8px;

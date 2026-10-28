@@ -320,6 +320,32 @@
       flex-shrink: 0;
     }
 
+    /* Stops scroll area — the panel's scroll region. Give the scrollbar its own
+       reserved lane (scrollbar-gutter) and keep content 12px clear of it so the
+       rows and their delete buttons never sit under the scrollbar. */
+    #stopsList {
+      flex: 1;
+      min-height: 0;             /* let the flex child shrink so it can scroll */
+      overflow-y: auto;
+      padding-right: var(--space-12);
+      scrollbar-gutter: stable;
+    }
+
+    /* Route summary — stop count + total distance as two equal DS .card
+       stats that fill the panel width. Values reuse .text-h3, labels
+       .text-caption; only layout is added here. */
+    .route-summary {
+      display: flex;
+      gap: var(--space-12);
+      padding: var(--space-16) 0 var(--space-32);
+    }
+    .route-summary-item { flex: 1; }  /* equal width → fills horizontally */
+    .route-summary-item .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
     /* Brand cell in the top bar — spans the panel's 600px column and carries
        a right border so the vertical divider runs from the very top of the
        header down through the panel (one continuous line). */
@@ -469,21 +495,54 @@
     }
     .map-toolbar-color { position: relative; display: flex; }
 
-    /* Color swatch popover — opens above the color button. */
+    /* Color swatch popover — opens above the color button. Offset =
+       8px pointer height + 8px gap, so the pointer sits clear of the button. */
     .color-popover {
       position: absolute;
-      bottom: calc(100% + var(--space-8));
+      bottom: calc(100% + var(--space-16));
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: var(--space-8);
-      padding: var(--space-8);
+      flex-direction: column;
+      gap: var(--space-12);
+      padding: var(--space-12);
       background: var(--surface-card);
       border: 1px solid var(--border-default);
       border-radius: var(--radius-card);
       box-shadow: var(--shadow-modal);
     }
     .color-popover[hidden] { display: none; }
+    /* Downward pointer at the bottom-center, aimed at the color button —
+       mirrors the map tooltip's tip. Two stacked triangles so the popover's
+       1px border reads on the pointer too: ::before is the border-colored
+       triangle, ::after the slightly smaller surface-colored fill on top. */
+    .color-popover::before,
+    .color-popover::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-bottom: 0;
+    }
+    .color-popover::before {
+      transform: translateX(-50%);
+      border-width: 8px;
+      border-color: var(--border-default) transparent transparent;
+    }
+    .color-popover::after {
+      transform: translateX(-50%);
+      border-width: 7px;
+      border-color: var(--surface-card) transparent transparent;
+    }
+    /* Swatches in a fixed 5-column grid (wraps to a second row). */
+    .color-swatches {
+      display: grid;
+      grid-template-columns: repeat(5, 24px);
+      gap: var(--space-8);
+    }
     .color-swatch {
       width: 24px;
       height: 24px;
@@ -498,6 +557,9 @@
     /* Active = current route color: a ring in --primary with a white gap. */
     .color-swatch.active { box-shadow: 0 0 0 2px var(--surface-card), 0 0 0 4px var(--primary); }
     .color-swatch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    /* Footer holds the Save (commit) button, right-aligned. */
+    .color-popover-footer { display: flex; justify-content: flex-end; }
+    .color-save { width: 100%; justify-content: center; }
   </style>
 </head>
 <body>
@@ -553,8 +615,22 @@
       </div>
 
       <!-- Stops list — populated as the user clicks the map (hidden until first stop) -->
-      <div id="stopsList" style="display: none; flex: 1; overflow: hidden auto;">
-        <hr class="route-panel-divider" style="margin-top: var(--space-12);">
+      <div id="stopsList" style="display: none;">
+        <!-- Route summary — live stop count + total route distance (DS cards) -->
+        <div class="route-summary" aria-label="Route summary">
+          <div class="card route-summary-item">
+            <div class="card-body">
+              <span class="text-h3" id="summaryStopCount">0</span>
+              <span class="text-caption">Stops</span>
+            </div>
+          </div>
+          <div class="card route-summary-item">
+            <div class="card-body">
+              <span class="text-h3" id="summaryDistance">—</span>
+              <span class="text-caption">Total distance</span>
+            </div>
+          </div>
+        </div>
         <div id="stopsItems"></div>
       </div>
 
@@ -627,7 +703,7 @@
         <div id="map"></div>
 
         <!-- Floating route toolbar (bottom-center of the map). NEW component
-             built from tokens; the four tools reuse the DS .btn-icon. -->
+             built from tokens; the tools reuse the DS .btn-icon. -->
         <div class="map-toolbar" id="mapToolbar" role="toolbar" aria-label="Route tools">
           <button class="btn-icon" id="undoBtn" title="Undo" aria-label="Undo" disabled>
             <i data-lucide="undo-2" style="width: 20px; height: 20px;"></i>
@@ -636,24 +712,46 @@
             <i data-lucide="redo-2" style="width: 20px; height: 20px;"></i>
           </button>
           <span class="map-toolbar-sep" aria-hidden="true"></span>
+          <button class="btn-icon" id="zoomFitBtn" title="Zoom to fit route"
+                  aria-label="Zoom to fit route" disabled>
+            <i data-lucide="maximize" style="width: 20px; height: 20px;"></i>
+          </button>
+          <span class="map-toolbar-sep" aria-hidden="true"></span>
           <div class="map-toolbar-color">
             <button class="btn-icon" id="colorBtn" title="Route color"
                     aria-label="Change route color" aria-haspopup="true" aria-expanded="false">
               <i data-lucide="palette" style="width: 20px; height: 20px;"></i>
             </button>
-            <!-- Swatch popover; backgrounds reference DS color tokens -->
+            <!-- Swatch popover; backgrounds reference DS color tokens. Picking a
+                 swatch previews it live and keeps the popover open; Save commits. -->
             <div class="color-popover" id="colorPopover" hidden>
-              <button class="color-swatch" data-token="--text-primary" style="background: var(--text-primary);" title="Default" aria-label="Default"></button>
-              <button class="color-swatch" data-token="--primary" style="background: var(--primary);" title="Blue" aria-label="Blue"></button>
-              <button class="color-swatch" data-token="--success" style="background: var(--success);" title="Green" aria-label="Green"></button>
-              <button class="color-swatch" data-token="--warning" style="background: var(--warning);" title="Amber" aria-label="Amber"></button>
-              <button class="color-swatch" data-token="--danger" style="background: var(--danger);" title="Red" aria-label="Red"></button>
+              <div class="color-swatches">
+                <button class="color-swatch" data-token="--text-primary" style="background: var(--text-primary);" title="Slate" aria-label="Slate"></button>
+                <button class="color-swatch" data-token="--primary" style="background: var(--primary);" title="Blue" aria-label="Blue"></button>
+                <button class="color-swatch" data-token="--route-indigo" style="background: var(--route-indigo);" title="Indigo" aria-label="Indigo"></button>
+                <button class="color-swatch" data-token="--route-violet" style="background: var(--route-violet);" title="Violet" aria-label="Violet"></button>
+                <button class="color-swatch" data-token="--route-magenta" style="background: var(--route-magenta);" title="Magenta" aria-label="Magenta"></button>
+                <button class="color-swatch" data-token="--danger" style="background: var(--danger);" title="Red" aria-label="Red"></button>
+                <button class="color-swatch" data-token="--warning" style="background: var(--warning);" title="Amber" aria-label="Amber"></button>
+                <button class="color-swatch" data-token="--route-teal" style="background: var(--route-teal);" title="Teal" aria-label="Teal"></button>
+                <button class="color-swatch" data-token="--success" style="background: var(--success);" title="Green" aria-label="Green"></button>
+              </div>
+              <div class="color-popover-footer">
+                <button class="btn btn-primary color-save" id="colorSaveBtn">
+                  <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+                  Save
+                </button>
+              </div>
             </div>
           </div>
           <span class="map-toolbar-sep" aria-hidden="true"></span>
           <button class="btn-icon" id="deleteBtn" title="Delete selected stop"
                   aria-label="Delete selected stop" disabled>
             <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+          </button>
+          <button class="btn-icon" id="clearBtn" title="Clear all stops"
+                  aria-label="Clear all stops" disabled>
+            <i data-lucide="eraser" style="width: 20px; height: 20px;"></i>
           </button>
         </div>
       </div>
@@ -756,6 +854,30 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeEditRouteName()">Cancel</button>
         <button class="btn btn-primary" onclick="saveEditRouteName()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       LEAVE WITHOUT SAVING — confirmation (reuses .modal)
+       ============================================================ -->
+  <div class="modal-overlay" id="leaveRouteModal">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Leave without saving?</h2>
+        <button class="btn-icon" onclick="closeLeaveModal()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-small text-secondary" style="margin: 0;">
+          You have unsaved changes to this route. Your draft is autosaved, so you
+          can come back to it — but you'll leave the builder now.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeLeaveModal()">Stay</button>
+        <button class="btn btn-primary" id="leaveConfirmBtn">Leave</button>
       </div>
     </div>
   </div>
@@ -893,6 +1015,15 @@
     const stopsList  = document.getElementById('stopsList');
     const stopsItems = document.getElementById('stopsItems');
     const saveRouteButton = document.getElementById('saveRouteButton');
+    const summaryStopCount = document.getElementById('summaryStopCount');
+    const summaryDistance = document.getElementById('summaryDistance');
+
+    /* Live route summary — stop count + total drawn-route distance. */
+    function updateRouteSummary() {
+      summaryStopCount.textContent = stops.size;
+      summaryDistance.textContent = (typeof routeTotalDistance === 'number')
+        ? formatDistance(routeTotalDistance) : '—';
+    }
 
     /* Scaled from the 67×76 source SVG; anchored at the pin tip (~33,54). */
     const stopIcon = L.icon({
@@ -923,6 +1054,7 @@
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     }
     let routeColor = cssVar('--text-primary') || '#1A1D23'; // drawn route line color
+    let routeTotalDistance = null;  // metres of the drawn route (for the summary)
     const undoStack = [];      // pre-change state snapshots (see snapshotState)
     const redoStack = [];
     let routeLayer = null;
@@ -1034,6 +1166,7 @@
       saveRouteButton.disabled = stops.size < 2;
       if (!has) document.documentElement.style.setProperty('--panel-width', '600px');
       updateToolbarState();
+      updateRouteSummary();
       map.invalidateSize();
     }
 
@@ -1091,6 +1224,7 @@
       nameInput.addEventListener('focus', function () { nameBefore = snapshotState(); });
       nameInput.addEventListener('change', function () {
         if (nameBefore) { commitHistory(nameBefore); nameBefore = null; }
+        markChanged();  // persist the renamed stop
       });
 
       /* Hover info tooltip (name / number / coords); becomes permanent while the
@@ -1349,6 +1483,8 @@
         map.removeLayer(routeLayer);
         routeLayer = null;
       }
+      routeTotalDistance = null;
+      updateRouteSummary();
     }
 
     /* ========================================================
@@ -1412,10 +1548,13 @@
           opacity: 0.8
         }
       }).addTo(map);
+      routeTotalDistance = data.routes[0].distance;  // metres, for the summary
+      updateRouteSummary();
       drawLegArrows(data.routes[0].legs);
     }
 
     async function updateRoadRoute() {
+      markChanged();  // any route recompute follows a stop change → autosave
       const ordered = Array.from(stops.entries()).map(function (e) {
         return { id: e[0], latlng: e[1].marker.getLatLng() };
       });
@@ -1530,18 +1669,21 @@
     });
 
     /* ========================================================
-       ROUTE TOOLBAR — floating undo / redo / color / delete.
-       Undo/redo work on lightweight state snapshots (each stop's id, position
-       and name, plus the route color and stop counter); restoring clears the
-       canvas, rebuilds the stops via createStop, and re-runs validation so
-       warnings/distances recompute. Mutating actions (add/delete/snap/rename/
-       recolor) push a pre-change snapshot via pushHistory before they run.
+       ROUTE TOOLBAR — floating undo / redo / zoom-to-fit / color / delete /
+       clear. Undo/redo work on lightweight stop snapshots (each stop's id,
+       position and name, plus the stop counter); restoring clears the canvas,
+       rebuilds the stops via createStop, and re-runs validation so warnings/
+       distances recompute. Stop-mutating actions (add/delete/snap/rename/clear)
+       push a pre-change snapshot via pushHistory; route color is NOT undoable.
        ======================================================== */
     const undoBtn = document.getElementById('undoBtn');
     const redoBtn = document.getElementById('redoBtn');
+    const zoomFitBtn = document.getElementById('zoomFitBtn');
     const deleteBtn = document.getElementById('deleteBtn');
+    const clearBtn = document.getElementById('clearBtn');
     const colorBtn = document.getElementById('colorBtn');
     const colorPopover = document.getElementById('colorPopover');
+    const colorSaveBtn = document.getElementById('colorSaveBtn');
 
     function snapshotState() {
       return {
@@ -1605,42 +1747,192 @@
       undoBtn.disabled = undoStack.length === 0;
       redoBtn.disabled = redoStack.length === 0;
       deleteBtn.disabled = !selectedStopId;
+      zoomFitBtn.disabled = stops.size === 0;
+      clearBtn.disabled = stops.size === 0;
+    }
+
+    /* Frame all stops in view. */
+    function zoomToFit() {
+      if (!stops.size) return;
+      const group = L.featureGroup(Array.from(stops.values()).map(function (e) { return e.marker; }));
+      map.fitBounds(group.getBounds(), { padding: [48, 48] });
+    }
+
+    /* Remove every stop (undoable). Mirrors applyState's teardown, then lets
+       updateRoadRoute clear the line/arrows/distances (fewer than 2 stops). */
+    function clearAllStops() {
+      if (!stops.size) return;
+      pushHistory();
+      clearSelection();
+      Array.from(stops.keys()).forEach(function (id) {
+        map.removeLayer(stops.get(id).marker);
+        stops.get(id).row.remove();
+      });
+      stops.clear();
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      updateRoadRoute();
     }
 
     undoBtn.addEventListener('click', undo);
     redoBtn.addEventListener('click', redo);
+    zoomFitBtn.addEventListener('click', zoomToFit);
+    clearBtn.addEventListener('click', clearAllStops);
     deleteBtn.addEventListener('click', function () {
       if (selectedStopId) deleteStop(selectedStopId);
     });
 
-    /* Color picker popover. */
-    function toggleColorPopover(open) {
-      const show = (open === undefined) ? colorPopover.hidden : open;
-      colorPopover.hidden = !show;
-      colorBtn.setAttribute('aria-expanded', String(show));
+    /* Color picker popover. Picking a swatch previews the color live on the
+       route and keeps the popover open; Save commits and closes. Dismissing any
+       other way (click outside / color button again) cancels back to the color
+       that was active when the popover opened. */
+    let colorBeforeOpen = null;  // committed color at open time, for cancel/revert
+
+    function openColorPopover() {
+      colorBeforeOpen = routeColor;
+      colorPopover.hidden = false;
+      colorBtn.setAttribute('aria-expanded', 'true');
     }
+    function commitColor() {           // Save
+      if (colorBeforeOpen !== null && routeColor !== colorBeforeOpen) markChanged();
+      colorBeforeOpen = null;
+      closeColorPopover();
+    }
+    function cancelColor() {           // dismiss without saving → revert preview
+      if (colorBeforeOpen !== null) setRouteColor(colorBeforeOpen);
+      colorBeforeOpen = null;
+      closeColorPopover();
+    }
+    function closeColorPopover() {
+      colorPopover.hidden = true;
+      colorBtn.setAttribute('aria-expanded', 'false');
+    }
+
     colorBtn.addEventListener('click', function (e) {
-      e.stopPropagation();  // don't let the outside-click handler immediately close it
-      toggleColorPopover();
+      e.stopPropagation();  // keep the outside-click handler from firing on this click
+      if (colorPopover.hidden) openColorPopover();
+      else cancelColor();
     });
     colorPopover.addEventListener('click', function (e) {
       const sw = e.target.closest('.color-swatch');
       if (!sw) return;
       const color = cssVar(sw.dataset.token);
-      if (color && color !== routeColor) {
-        setRouteColor(color);  // color is not undoable (intentionally)
-      }
-      toggleColorPopover(false);
+      if (color) setRouteColor(color);  // live preview; stays open until Save
     });
+    colorSaveBtn.addEventListener('click', commitColor);
     document.addEventListener('click', function (e) {
       if (!colorPopover.hidden && !colorPopover.contains(e.target) && !colorBtn.contains(e.target)) {
-        toggleColorPopover(false);
+        cancelColor();
       }
     });
 
     /* Reflect the initial color + button states. */
     setRouteColor(routeColor);
     updateToolbarState();
+
+    /* ========================================================
+       AUTOSAVE & UNSAVED-CHANGES GUARD.
+       The in-progress route is autosaved to sessionStorage on every change and
+       restored on reload. Leaving with unsaved changes is guarded: the in-app
+       "Back to routes" link shows a DS confirmation modal, and a native
+       beforeunload prompt covers tab close / refresh (that one is browser-drawn
+       and can't be DS-styled). Saving clears the dirty flag and the draft.
+       ======================================================== */
+    const DRAFT_KEY = 'routeAutosaveDraft';
+    let isDirty = false;
+    let leavingIntentionally = false;
+
+    function serializeDraft() {
+      return {
+        name: routeNameLabel.textContent.trim(),
+        color: routeColor,
+        seq: stopSeq,
+        stops: Array.from(stops.entries()).map(function (e) {
+          const ll = e[1].marker.getLatLng();
+          return { id: e[0], lat: ll.lat, lng: ll.lng, name: e[1].row.querySelector('.input').value };
+        }),
+      };
+    }
+
+    function autosave() {
+      try {
+        if (stops.size) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(serializeDraft()));
+        else sessionStorage.removeItem(DRAFT_KEY);
+      } catch (e) { /* storage unavailable — ignore */ }
+    }
+    function markChanged() { isDirty = true; autosave(); }
+    function hasUnsavedChanges() { return isDirty && stops.size > 0; }
+
+    /* Transient toast (reuses the DS .toast; auto-dismisses). */
+    function showToast(message, icon) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.innerHTML = '<i data-lucide="' + (icon || 'info') + '" style="width: 20px; height: 20px;"></i>' +
+                    '<span>' + message + '</span>';
+      document.body.appendChild(t);
+      lucide.createIcons();
+      setTimeout(function () { t.remove(); }, 3000);
+    }
+
+    function restoreDraft() {
+      let draft;
+      try { draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY)); } catch (e) { return; }
+      if (!draft || !Array.isArray(draft.stops) || !draft.stops.length) return;
+      if (draft.name) {
+        routeNameLabel.textContent = draft.name;
+        if (routeBreadcrumbName) routeBreadcrumbName.textContent = draft.name;
+      }
+      if (draft.color) setRouteColor(draft.color);
+      stopSeq = draft.seq || draft.stops.length;
+      draft.stops.forEach(function (s) {
+        createStop(s.id, L.latLng(s.lat, s.lng), s.name);
+      });
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      lucide.createIcons();
+      updateRoadRoute();
+      showToast('Draft restored', 'rotate-ccw');
+    }
+
+    /* Save Route — marks the route saved (clears the dirty flag + draft). */
+    saveRouteButton.addEventListener('click', function () {
+      if (saveRouteButton.disabled) return;
+      isDirty = false;
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {}
+      showToast('Route saved', 'check');
+    });
+
+    /* Leave-without-saving guard on the in-app back link. */
+    const leaveRouteModal = document.getElementById('leaveRouteModal');
+    const leaveConfirmBtn = document.getElementById('leaveConfirmBtn');
+    const backLink = document.querySelector('.route-panel-back');
+    let pendingLeaveHref = null;
+
+    function closeLeaveModal() { leaveRouteModal.classList.remove('open'); }
+    leaveRouteModal.addEventListener('click', function (e) {
+      if (e.target === leaveRouteModal) closeLeaveModal();
+    });
+    backLink.addEventListener('click', function (e) {
+      if (!hasUnsavedChanges()) return;         // nothing to lose → navigate normally
+      e.preventDefault();
+      pendingLeaveHref = backLink.getAttribute('href');
+      leaveRouteModal.classList.add('open');
+      lucide.createIcons();
+    });
+    leaveConfirmBtn.addEventListener('click', function () {
+      leavingIntentionally = true;              // skip the beforeunload prompt
+      window.location.href = pendingLeaveHref || 'flow-b-3-routes-table.html';
+    });
+
+    /* Native fallback for tab close / refresh (browser-drawn, not DS-styled). */
+    window.addEventListener('beforeunload', function (e) {
+      if (leavingIntentionally || !hasUnsavedChanges()) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    /* Restore any autosaved draft left from a previous session. */
+    restoreDraft();
   </script>
 </body>
 </html>
