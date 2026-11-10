@@ -121,6 +121,30 @@
       height: 100%;
     }
 
+    /* Plotting cursor — show a crosshair ("+") over the map instead of the
+       default grab/hand, signalling click-to-add-stop. Overrides Leaflet's
+       grab/grabbing cursors, including while the map is being dragged. */
+    #map .leaflet-grab,
+    #map.leaflet-grab,
+    #map .leaflet-interactive {
+      cursor: crosshair;
+    }
+    #map.leaflet-dragging .leaflet-grab,
+    #map.leaflet-dragging.leaflet-grab,
+    #map.leaflet-dragging .leaflet-interactive {
+      cursor: crosshair;
+    }
+
+    /* Location search overlay — top-left of the map, 24px inset.
+       Reuses the design-system .search-input (icon) + .input. */
+    .map-location-search {
+      position: absolute;
+      top: var(--space-24);
+      left: var(--space-24);
+      width: 320px;
+      z-index: 1000;
+    }
+
     /* Brand cell in the top bar — spans the panel's 300px column and carries
        a right border so the vertical divider runs from the very top of the
        header down through the panel (one continuous line). */
@@ -149,6 +173,11 @@
       </div>
     </div>
 
+    <!-- Page title (moved here from the left panel) -->
+    <div style="font-size: var(--font-h3); font-weight: var(--weight-semibold); color: var(--text-primary);">
+      Route Creation
+    </div>
+
     <div style="flex: 1;"></div>
 
     <!-- Right side actions -->
@@ -172,43 +201,38 @@
 
       <hr class="route-panel-divider">
 
-      <h2 class="route-panel-title">Route Creation</h2>
+      <!-- Route name -->
+      <div>
+        <div class="text-caption">Route Name</div>
+        <div class="text-h3" style="margin-top: var(--space-4);">Test-Route</div>
+      </div>
 
-      <!-- Select route — custom dropdown (our own .ds-action-dropdown menu, not a native select) -->
-      <div class="form-group" style="margin-bottom: 0;">
-        <label class="form-label">Select existing route</label>
-        <div style="position: relative;">
-          <button type="button" class="select" id="routeTrigger" aria-haspopup="listbox" aria-expanded="false"
-                  style="text-align: left; cursor: pointer; color: var(--text-tertiary);">
-            <span id="routeLabel">Select a route...</span>
-          </button>
-          <div class="ds-action-dropdown" id="routeMenu"
-               style="position: absolute; top: calc(100% + var(--space-4)); left: 0; width: 100%; z-index: 700; display: none; max-height: 280px; overflow-y: auto;">
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 22 — Downtown Loop"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 22 — Downtown Loop</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 45A — Airport Express"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 45A — Airport Express</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 78 — City Center"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 78 — City Center</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 12B — North Shuttle"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 12B — North Shuttle</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 56 — Lake Gardens"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 56 — Lake Gardens</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 33 — Tech Park Shuttle"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 33 — Tech Park Shuttle</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 91 — Hospital Line"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 91 — Hospital Line</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 67A — Southern Express"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 67A — Southern Express</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 15 — University Circuit"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 15 — University Circuit</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 88 — Evening Special"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 88 — Evening Special</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 102 — Riverside"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 102 — Riverside</button>
-            <button type="button" class="ds-action-dropdown-item" data-route="Route 29 — Mall Connector"><span class="rc-check" style="width:16px;display:inline-flex;"></span>Route 29 — Mall Connector</button>
-          </div>
+      <!-- Empty-stop guide — fills the middle of the panel -->
+      <div class="empty-state" style="flex: 1; padding: var(--space-24) 0; border: none; background: transparent;">
+        <div class="empty-state-icon" style="margin-bottom: var(--space-12);">
+          <i data-lucide="map-pin" style="width: 40px; height: 40px; color: var(--text-tertiary);"></i>
         </div>
+        <h3 class="empty-state-title" style="font-size: var(--font-h3);">Start building your route</h3>
+        <p class="empty-state-description" style="margin-bottom: 0;">
+          Plot your route visually — click anywhere on the map to drop stops one by one.
+        </p>
+
+        <!-- Or upload instead -->
+        <div class="or-divider" style="width: 100%;"><span>Or</span></div>
+
+        <p class="empty-state-description" style="margin-bottom: var(--space-12);">
+          Upload a CSV file with the lat-longs of your stops.
+        </p>
+        <a href="#" class="link-button" onclick="openCsvFormat(); return false;">
+          View CSV file format
+          <i data-lucide="arrow-up-right" class="link-button-arrow" style="width: 14px; height: 14px;"></i>
+        </a>
       </div>
 
-      <!-- Or divider -->
-      <div class="or-divider">
-        <span>Or</span>
-      </div>
-
-      <!-- Create New Route button -->
-      <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="openCreateRoute()">
-        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-        Create New Route
+      <!-- Upload CSV (secondary action, pinned to the bottom) -->
+      <button class="btn btn-secondary" style="width: 100%; justify-content: center;">
+        <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+        Upload CSV File
       </button>
     </div>
 
@@ -224,11 +248,23 @@
           </div>
           <div class="breadcrumb-item">
             <i data-lucide="warehouse" style="width: 16px; height: 16px;"></i>
-            <span class="breadcrumb-current">Salt Lake Depot</span>
+            <span class="breadcrumb-link">Salt Lake Depot</span>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <i data-lucide="route" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-current">Test-Route</span>
           </div>
         </div>
       </div>
       <div class="map-canvas">
+        <!-- Location search (design-system .search-input) -->
+        <div class="map-location-search">
+          <div class="search-input">
+            <input type="text" id="mapSearchInput" class="input"
+                   placeholder="Search location..." autocomplete="off" />
+          </div>
+        </div>
         <div id="map"></div>
       </div>
     </div>
@@ -266,6 +302,45 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       CSV FILE FORMAT — help modal (reuses .modal + .table)
+       ============================================================ -->
+  <div class="modal-overlay" id="csvFormatModal">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 class="modal-title">CSV file format</h2>
+        <button class="btn-icon" onclick="closeCsvFormat()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-small text-secondary" style="margin-bottom: var(--space-16);">
+          Save your stops as a <code>.csv</code> with one row per stop, in visiting order.
+          The first row must be the header shown below.
+        </p>
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr><th>sequence</th><th>stop_name</th><th>latitude</th><th>longitude</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Salt Lake Depot</td><td>22.5726</td><td>88.3639</td></tr>
+              <tr><td>2</td><td>City Centre</td><td>22.5810</td><td>88.4090</td></tr>
+              <tr><td>3</td><td>Sector V</td><td>22.5770</td><td>88.4330</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-small text-secondary" style="margin-top: var(--space-16); margin-bottom: 0;">
+          <strong>latitude</strong> and <strong>longitude</strong> are decimal degrees (WGS-84).
+          Stops are connected in ascending <strong>sequence</strong> order.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCsvFormat()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -278,40 +353,31 @@
       maxZoom: 19
     }).addTo(map);
 
-    /* Custom "Select existing route" dropdown (our own .ds-action-dropdown) */
-    const routeTrigger = document.getElementById('routeTrigger');
-    const routeMenu = document.getElementById('routeMenu');
-    const routeLabel = document.getElementById('routeLabel');
+    /* Move the +/- zoom controls to the bottom-left of the map. */
+    map.zoomControl.setPosition('bottomleft');
 
-    routeTrigger.addEventListener('click', function (e) {
-      e.stopPropagation();
-      const open = routeMenu.style.display === 'block';
-      routeMenu.style.display = open ? 'none' : 'block';
-      routeTrigger.setAttribute('aria-expanded', String(!open));
-    });
+    /* ========================================================
+       LOCATION SEARCH — geocode via OpenStreetMap Nominatim,
+       then pan/zoom the map to the first match.
+       ======================================================== */
+    const mapSearchInput = document.getElementById('mapSearchInput');
 
-    routeMenu.addEventListener('click', function (e) { e.stopPropagation(); });
-
-    routeMenu.querySelectorAll('[data-route]').forEach(function (item) {
-      item.addEventListener('click', function () {
-        routeLabel.textContent = item.dataset.route;
-        routeTrigger.style.color = 'var(--text-primary)';
-        routeMenu.querySelectorAll('.ds-action-dropdown-item').forEach(function (x) {
-          x.classList.remove('active');
-          x.querySelector('.rc-check').innerHTML = '';
-        });
-        item.classList.add('active');
-        item.querySelector('.rc-check').innerHTML = '<i data-lucide="check" style="width:16px;height:16px;"></i>';
-        lucide.createIcons();
-        routeMenu.style.display = 'none';
-        routeTrigger.setAttribute('aria-expanded', 'false');
-      });
-    });
-
-    document.addEventListener('click', function () {
-      if (routeMenu.style.display === 'block') {
-        routeMenu.style.display = 'none';
-        routeTrigger.setAttribute('aria-expanded', 'false');
+    mapSearchInput.addEventListener('keydown', async function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const q = mapSearchInput.value.trim();
+      if (!q) return;
+      try {
+        const res = await fetch(
+          'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q)
+        );
+        const data = await res.json();
+        if (!data.length) return;
+        const { lat, lon } = data[0];
+        /* Just reveal the area — no marker is placed. */
+        map.setView([parseFloat(lat), parseFloat(lon)], 16);
+      } catch (err) {
+        /* Network/geocoder error — leave the map as-is. */
       }
     });
 
@@ -330,6 +396,19 @@
     }
     createRouteModal.addEventListener('click', function (e) {
       if (e.target === createRouteModal) closeCreateRoute();
+    });
+
+    /* ---- CSV file format help modal ---- */
+    const csvFormatModal = document.getElementById('csvFormatModal');
+    function openCsvFormat() {
+      csvFormatModal.classList.add('open');
+      lucide.createIcons();
+    }
+    function closeCsvFormat() {
+      csvFormatModal.classList.remove('open');
+    }
+    csvFormatModal.addEventListener('click', function (e) {
+      if (e.target === csvFormatModal) closeCsvFormat();
     });
 
     function crFieldError(inputId, helperId, on, msg, base) {

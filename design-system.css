@@ -37,6 +37,9 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Firefox custom scrollbar (inherited by all descendants): thumb + track. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-tertiary) var(--surface-background);
 }
 
 body {
@@ -44,6 +47,33 @@ body {
   background-color: var(--surface-background);
   color: var(--text-primary);
   line-height: 1.5;
+}
+
+/* ========================================
+   SCROLLBAR — project-wide custom scrollbar, DS colors only.
+   Foundational/global so every scroll area (vertical AND horizontal) is
+   consistent. Firefox reads scrollbar-width/color from html above; WebKit
+   (Chromium/Edge/Safari) uses the ::-webkit-scrollbar pseudo-elements below.
+   ======================================== */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--surface-background);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: var(--radius-button);
+  /* 2px track-colored border insets the thumb so it reads slim (border, not spacing). */
+  border: 2px solid var(--surface-background);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+/* Where vertical + horizontal scrollbars meet. */
+*::-webkit-scrollbar-corner {
+  background: var(--surface-background);
 }
 
 /* ========================================
@@ -72,7 +102,16 @@ body {
   --warning: #D97706;
   --danger: #E02424;
   --info: #1A56DB;
-  
+
+  /* Route line palette — categorical colors for drawing routes on the (light)
+     map. Chosen saturated/dark for contrast on bright OSM tiles. The route
+     color picker also reuses --text-primary, --primary, --success, --warning
+     and --danger from above. */
+  --route-indigo: #5145CD;
+  --route-violet: #7E3AF2;
+  --route-magenta: #D61F69;
+  --route-teal: #047481;
+
   /* ===== SPACING (8px grid) ===== */
   --space-4: 4px;
   --space-8: 8px;
@@ -105,6 +144,11 @@ body {
   /* ===== ELEVATION ===== */
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-modal: 0 8px 24px rgba(16, 24, 40, 0.12);
+  /* Primary-tinted selection/hover glow (rgba of --primary, per the semantic
+     tint convention). Works as a box-shadow or filter: drop-shadow() — e.g. a
+     selected (strong) or hovered (soft) map pin. */
+  --glow-primary: 0 2px 6px rgba(26, 86, 219, 0.5);
+  --glow-primary-soft: 0 2px 4px rgba(26, 86, 219, 0.35);
   
   /* ===== BORDER RADIUS ===== */
   --radius-card: 8px;

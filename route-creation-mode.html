@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route creation mode</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .route-editor {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Secondary context bar — org + depot (tokens only; breadcrumb reused) */
+    .map-subbar {
+      flex-shrink: 0;
+      background: var(--surface-background);
+      border-bottom: 1px solid var(--border-default);
+      display: flex;
+      align-items: center;
+      padding: var(--space-24);
+    }
+    .map-subbar .breadcrumb-item i { color: var(--text-tertiary); }
+
+    /* Shared width for the left panel + its matching top-bar brand column,
+       so the vertical divider stays continuous while the panel is resized.
+       600px is the original width and the minimum (grow-only). */
+    :root { --panel-width: 600px; }
+
+    /* Left panel */
+    .route-panel {
+      width: var(--panel-width);
+      flex-shrink: 0;
+      background: var(--surface-card);
+      border-right: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-24);
+      overflow: hidden auto;
+    }
+
+    .route-panel-back {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+      text-decoration: none;
+      margin-bottom: var(--space-24);
+      transition: color 0.15s;
+    }
+    .route-panel-back:hover {
+      color: var(--text-primary);
+    }
+
+    /* Full-bleed divider under "Back to routes" (aligns with the context bar);
+       24px gap below it before the title. Negative margins cancel the 24px
+       panel padding so the line spans edge to edge. */
+    .route-panel-divider {
+      height: 1px;
+      border: none;
+      background: var(--border-default);
+      margin: 0 calc(-1 * var(--space-24)) var(--space-24);
+    }
+
+    .route-panel-title {
+      font-size: 18px;
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+      margin-bottom: var(--space-24);
+    }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      margin: var(--space-24) 0;
+    }
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-default);
+    }
+    .or-divider span {
+      font-size: var(--font-small);
+      color: var(--text-tertiary);
+      font-weight: var(--weight-medium);
+    }
+
+    /* Map area — column so the context bar sits only above the map */
+    .route-map-area {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-canvas {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Leaflet makes the map container focusable; suppress the browser focus
+       outline that otherwise draws a box around the whole map after a click. */
+    #map:focus { outline: none; }
+
+    /* Plotting cursor — show a crosshair ("+") over the map instead of the
+       default grab/hand, signalling click-to-add-stop. Overrides Leaflet's
+       grab/grabbing cursors, including while the map is being dragged. */
+    #map .leaflet-grab,
+    #map.leaflet-grab,
+    #map .leaflet-interactive {
+      cursor: crosshair;
+    }
+    #map.leaflet-dragging .leaflet-grab,
+    #map.leaflet-dragging.leaflet-grab,
+    #map.leaflet-dragging .leaflet-interactive {
+      cursor: crosshair;
+    }
+    /* Over a stop pin, show the normal pointer (clicking selects it), not the
+       plotting crosshair. The extra .stop-marker class outranks the
+       #map .leaflet-interactive crosshair rule above. */
+    #map .leaflet-marker-icon.stop-marker {
+      cursor: pointer;
+    }
+
+    /* Location search overlay — top-left of the map, 24px inset.
+       Reuses the design-system .search-input (icon) + .input. */
+    .map-location-search {
+      position: absolute;
+      top: var(--space-24);
+      left: var(--space-24);
+      width: 320px;
+      z-index: 1000;
+    }
+
+    /* Resize handle on the right edge of the left sidebar. New element
+       (the DS has no resize handle) — built from tokens only. It overlays
+       the panel's border and shows a primary line on hover/drag. */
+    .panel-resize-handle {
+      flex-shrink: 0;
+      width: 6px;
+      margin: 0 -3px;
+      position: relative;
+      z-index: 500;
+      cursor: col-resize;
+    }
+    /* While the handle is hovered/dragged, recolor the existing 1px borders of
+       BOTH the top-bar brand column and the panel to primary. They sit at the
+       same x and are both 1px, so they read as one continuous highlighted line
+       (same colour + thickness) instead of a separate thicker overlay. */
+    body.panel-divider-active .top-bar-brand,
+    body.panel-divider-active .route-panel {
+      border-right-color: var(--primary);
+    }
+
+    /* Direction arrow — one per segment between two consecutive stops,
+       pointing in the travel (plotting) order. Sits on the drawn route and
+       is non-interactive so map clicks still drop stops. Chevron default
+       points east; JS rotates the badge to the segment's screen bearing. */
+    .route-arrow-badge {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1A1D23; /* --text-primary (design-system black) */
+      /* White halo so the black chevron stays legible on the black route line. */
+      filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
+    }
+    .route-arrow-badge svg { display: block; }
+
+    /* Per-segment distance pill on the map — NEW element (the DS has no
+       map label), composed from tokens only. Sits at the leg midpoint, lifted
+       above the direction chevron so the two don't overlap. Reuses the card
+       surface + card shadow so it reads as a floating DS chip; translate centers
+       it over the point (-50% X) and lifts it clear of the 30px chevron (-20px). */
+    .route-distance-marker { width: auto !important; height: auto !important; }
+    .route-distance-badge {
+      display: inline-flex;
+      align-items: center;
+      transform: translate(-50%, calc(-100% - 20px));
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-card);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: var(--font-small);
+      font-weight: var(--weight-medium);
+      line-height: 1;
+      white-space: nowrap;
+      border-radius: var(--radius-button);
+      box-shadow: var(--shadow-card);
+    }
+
+    /* A single stop row in the sidebar list (DS .badge + .input + .btn-icon). */
+    .stop-row {
+      display: flex;
+      align-items: stretch;
+      gap: var(--space-8);
+      /* Padding (not margin) under the row so the route line can run through the
+         gap unbroken into the next stop's badge. */
+      padding-bottom: var(--space-12);
+      cursor: pointer; /* the row is clickable to select its stop on the map */
+    }
+    /* The name field stays a text field — keep its caret cursor, not the row's. */
+    .stop-row .input { cursor: text; }
+    /* Marker column — the badge stacked over a vertical "route line" that grows
+       to fill the row, linking this stop's number down into the next one's so
+       the list reads as one continuous bus route. */
+    .stop-row-marker {
+      flex: 0 0 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .stop-row-line {
+      width: 2px;
+      flex: 1 1 auto;
+      min-height: var(--space-12);
+      background: var(--border-default);
+    }
+    /* Last stop is the end of the line — no trailing segment below it. */
+    .stop-row.is-last .stop-row-line { display: none; }
+    .stop-row-index {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      justify-content: center;
+      border-radius: var(--radius-button);
+      font-weight: var(--weight-semibold);
+      box-shadow: inset 0 0 0 1px var(--border-default);
+    }
+    .stop-row-content {
+      flex: 1;
+      min-width: 0;
+    }
+    /* Keep the delete button at the row top (the row stretches for the line). */
+    .stop-row > .btn-icon {
+      align-self: flex-start;
+    }
+    /* min-width:0 lets the input shrink inside flex so the row never forces
+       a horizontal scrollbar on the panel. */
+    .stop-row .input { min-width: 0; }
+    .stop-coordinates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4) var(--space-8);
+      margin-top: var(--space-4);
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .stop-coordinates span {
+      white-space: nowrap;
+    }
+    /* Road distance to the NEXT stop — sits at the bottom of a stop's content,
+       alongside the route line in the gap before the next badge. NEW element
+       (tokens only); the small arrow signals travel direction down the route. */
+    .stop-distance {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-top: var(--space-8);
+      font-size: var(--font-small);
+      font-weight: var(--weight-medium);
+      color: var(--text-secondary);
+    }
+    .stop-distance[hidden] { display: none; }
+    .stop-distance i { color: var(--text-tertiary); }
+    /* Inline off-road warning inside a stop row — shown once OSRM reports the
+       stop sits away from any road. Reuses --warning (same family as
+       .badge-warning) and the .link-button primitive for the fix action. */
+    .stop-warning {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-4) var(--space-8);
+      margin-top: var(--space-8);
+      font-size: var(--font-small);
+    }
+    .stop-warning[hidden] { display: none; }
+    .stop-warning-text {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      color: var(--warning);
+    }
+    .stop-warning-text i { flex-shrink: 0; }
+    .stop-warning .link-button { font-size: var(--font-small); }
+    .route-panel-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      flex-shrink: 0;
+    }
+
+    /* Stops scroll area — the panel's scroll region. Give the scrollbar its own
+       reserved lane (scrollbar-gutter) and keep content 12px clear of it so the
+       rows and their delete buttons never sit under the scrollbar. */
+    #stopsList {
+      flex: 1;
+      min-height: 0;             /* let the flex child shrink so it can scroll */
+      overflow-y: auto;
+      padding-right: var(--space-12);
+      scrollbar-gutter: stable;
+    }
+
+    /* Route summary — stop count + total distance as two equal DS .card
+       stats that fill the panel width. Values reuse .text-h3, labels
+       .text-caption; only layout is added here. */
+    .route-summary {
+      display: flex;
+      gap: var(--space-12);
+      padding: var(--space-16) 0 var(--space-32);
+    }
+    .route-summary-item { flex: 1; }  /* equal width → fills horizontally */
+    .route-summary-item .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* Brand cell in the top bar — spans the panel's 600px column and carries
+       a right border so the vertical divider runs from the very top of the
+       header down through the panel (one continuous line). */
+    .top-bar-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      align-self: stretch;
+      width: var(--panel-width);
+      margin-left: calc(-1 * var(--space-24));
+      padding-left: var(--space-24);
+      border-right: 1px solid var(--border-default);
+    }
+
+    /* ============================================================
+       OFF-ROAD STOP POPOVER — NEW COMPONENT (tokens only).
+       The DS has no map-anchored callout, and Leaflet's popup is the only
+       container that tracks a latlng as the map pans/zooms — so we restyle
+       its shell to the DS card surface instead of inventing a floating
+       panel. The body is composed from existing .btn / .btn-primary /
+       .btn-ghost primitives; the icon chip reuses the .badge-warning tint.
+       ============================================================ */
+    .stop-warning-popup .leaflet-popup-content-wrapper {
+      background: var(--surface-card);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-modal);
+      /* Padding lives on the wrapper (not margin on the content) so the top/
+         bottom spacing can't collapse through this padding-less container. */
+      padding: var(--space-16);
+    }
+    .stop-warning-popup .leaflet-popup-content {
+      margin: 0;
+      width: auto !important;
+      font-family: var(--font-family);
+      line-height: 1.4;
+    }
+    /* Seamless pointer: same fill as the card and NO shadow of its own — a
+       shadow here made the tip read as a detached floating diamond. */
+    .stop-warning-popup .leaflet-popup-tip {
+      background: var(--surface-card);
+      box-shadow: none;
+      width: 14px;
+      height: 14px;
+    }
+    .stop-popover-head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+    }
+    .stop-popover-head i {
+      flex-shrink: 0;
+      color: var(--warning);
+    }
+    .stop-popover-title {
+      font-size: var(--font-h3);
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+    }
+    .stop-popover-sub {
+      margin-top: var(--space-4);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+    }
+    .stop-popover-actions {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-16);
+    }
+
+    /* ============================================================
+       STOP INFO TOOLTIP + SELECTED PIN — NEW (tokens only).
+       Hovering or clicking a stop (on the map or in the sidebar) shows its
+       name / number / coordinates. Leaflet's tooltip is the only container
+       that tracks a latlng as the map pans/zooms, so — as with the off-road
+       popover above — we restyle its shell to the DS card surface rather than
+       invent a floating panel. The selected pin reuses the same
+       location_pin.svg, enlarged with a primary glow to read as "selected".
+       ============================================================ */
+    .stop-info-tooltip.leaflet-tooltip {
+      background: var(--surface-card);
+      border: none;
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: var(--space-12);
+      font-family: var(--font-family);
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    /* Recolor Leaflet's little tooltip pointer to match the card surface. */
+    .stop-info-tooltip.leaflet-tooltip-top::before    { border-top-color: var(--surface-card); }
+    .stop-info-tooltip.leaflet-tooltip-bottom::before { border-bottom-color: var(--surface-card); }
+    .stop-info-tooltip.leaflet-tooltip-left::before   { border-left-color: var(--surface-card); }
+    .stop-info-tooltip.leaflet-tooltip-right::before  { border-right-color: var(--surface-card); }
+    .stop-info-name {
+      font-size: var(--font-body);
+      font-weight: var(--weight-semibold);
+      color: var(--text-primary);
+    }
+    .stop-info-meta {
+      margin-top: var(--space-4);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+    }
+    .stop-info-coords {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-4);
+      font-size: var(--font-small);
+      color: var(--text-secondary);
+    }
+    /* Stop pins — hover + selected states on the existing SVG marker, both
+       drawn as a primary glow (no transform, which Leaflet uses for position).
+       Hover is a lighter glow; selected is a stronger glow (and a larger icon,
+       set in JS). Selected keeps its glow even while hovered. */
+    .stop-marker { transition: filter var(--transition-fast); }
+    .stop-marker:hover { filter: drop-shadow(var(--glow-primary-soft)); }
+    .stop-marker-selected,
+    .stop-marker-selected:hover { filter: drop-shadow(var(--glow-primary)); }
+
+    /* ============================================================
+       FLOATING MAP TOOLBAR — NEW component (tokens only). A pill of .btn-icon
+       tools (undo / redo / route color / delete) floating at the bottom-center
+       of the map. Reuses the card surface + modal shadow so it reads as a DS
+       floating surface; the buttons are the existing .btn-icon.
+       ============================================================ */
+    .map-toolbar {
+      position: absolute;
+      bottom: var(--space-24);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-button);
+      box-shadow: var(--shadow-modal);
+    }
+    /* Hairline group separator (1px is a border, not spacing). */
+    .map-toolbar-sep {
+      width: 1px;
+      align-self: stretch;
+      margin: var(--space-4) 0;
+      background: var(--border-default);
+    }
+    .map-toolbar-color { position: relative; display: flex; }
+
+    /* Color swatch popover — opens above the color button. Offset =
+       8px pointer height + 8px gap, so the pointer sits clear of the button. */
+    .color-popover {
+      position: absolute;
+      bottom: calc(100% + var(--space-16));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12);
+      padding: var(--space-12);
+      background: var(--surface-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-modal);
+    }
+    .color-popover[hidden] { display: none; }
+    /* Downward pointer at the bottom-center, aimed at the color button —
+       mirrors the map tooltip's tip. Two stacked triangles so the popover's
+       1px border reads on the pointer too: ::before is the border-colored
+       triangle, ::after the slightly smaller surface-colored fill on top. */
+    .color-popover::before,
+    .color-popover::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-bottom: 0;
+    }
+    .color-popover::before {
+      transform: translateX(-50%);
+      border-width: 8px;
+      border-color: var(--border-default) transparent transparent;
+    }
+    .color-popover::after {
+      transform: translateX(-50%);
+      border-width: 7px;
+      border-color: var(--surface-card) transparent transparent;
+    }
+    /* Swatches in a fixed 5-column grid (wraps to a second row). */
+    .color-swatches {
+      display: grid;
+      grid-template-columns: repeat(5, 24px);
+      gap: var(--space-8);
+    }
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px var(--border-default);
+      transition: transform var(--transition-fast);
+    }
+    .color-swatch:hover { transform: scale(1.1); }
+    /* Active = current route color: a ring in --primary with a white gap. */
+    .color-swatch.active { box-shadow: 0 0 0 2px var(--surface-card), 0 0 0 4px var(--primary); }
+    .color-swatch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    /* Footer holds the Save (commit) button, right-aligned. */
+    .color-popover-footer { display: flex; justify-content: flex-end; }
+    .color-save { width: 100%; justify-content: center; }
+  </style>
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="top-bar">
+    <!-- Logo -->
+    <div class="top-bar-brand">
+      <div style="width: 32px; height: 32px; background-color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+        <i data-lucide="bus" style="width: 18px; height: 18px; color: white;"></i>
+      </div>
+      <div style="font-size: var(--font-small); font-weight: var(--weight-semibold); color: var(--text-primary);">
+        Transit Console
+      </div>
+    </div>
+
+    <!-- Page title (moved here from the left panel) -->
+    <div style="font-size: var(--font-h3); font-weight: var(--weight-semibold); color: var(--text-primary);">
+      Route Creation
+    </div>
+
+    <div style="flex: 1;"></div>
+
+    <!-- Right side actions -->
+    <button class="btn-icon" title="Help">
+      <i data-lucide="help-circle" style="width: 20px; height: 20px;"></i>
+    </button>
+
+    <button class="btn-icon" title="Settings" aria-label="Settings">
+      <i data-lucide="settings" style="width: 20px; height: 20px;"></i>
+    </button>
+  </header>
+
+  <div class="route-editor">
+
+    <!-- Left panel -->
+    <div class="route-panel" id="routePanel">
+      <a href="flow-b-3-routes-table.html" class="route-panel-back">
+        <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+        Back to routes
+      </a>
+
+      <hr class="route-panel-divider">
+
+      <!-- Route name -->
+      <div>
+        <div class="text-caption">Route Name</div>
+        <div style="display: flex; align-items: center; gap: var(--space-8); margin-top: var(--space-4);">
+          <span class="text-h3" id="routeNameLabel">Test-Route</span>
+          <button class="btn-icon" title="Edit route name" aria-label="Edit route name" onclick="openEditRouteName()">
+            <i data-lucide="pencil" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stops list — populated as the user clicks the map (hidden until first stop) -->
+      <div id="stopsList" style="display: none;">
+        <!-- Route summary — live stop count + total route distance (DS cards) -->
+        <div class="route-summary" aria-label="Route summary">
+          <div class="card route-summary-item">
+            <div class="card-body">
+              <span class="text-h3" id="summaryStopCount">0</span>
+              <span class="text-caption">Stops</span>
+            </div>
+          </div>
+          <div class="card route-summary-item">
+            <div class="card-body">
+              <span class="text-h3" id="summaryDistance">—</span>
+              <span class="text-caption">Total distance</span>
+            </div>
+          </div>
+        </div>
+        <div id="stopsItems"></div>
+      </div>
+
+      <!-- Empty-stop guide — fills the middle of the panel -->
+      <div class="empty-state" id="emptyGuide" style="flex: 1; padding: var(--space-24) 0; border: none; background: transparent;">
+        <div class="empty-state-icon" style="margin-bottom: var(--space-12);">
+          <i data-lucide="map-pin" style="width: 40px; height: 40px; color: var(--text-tertiary);"></i>
+        </div>
+        <h3 class="empty-state-title" style="font-size: var(--font-h3);">Start building your route</h3>
+        <p class="empty-state-description" style="margin-bottom: 0;">
+          Plot your route visually — click anywhere on the map to drop stops one by one.
+        </p>
+
+        <!-- Or upload instead -->
+        <div class="or-divider" style="width: 100%;"><span>Or</span></div>
+
+        <p class="empty-state-description" style="margin-bottom: var(--space-12);">
+          Upload a CSV file with the lat-longs of your stops.
+        </p>
+        <a href="#" class="link-button" onclick="openCsvFormat(); return false;">
+          View CSV file format
+          <i data-lucide="arrow-up-right" class="link-button-arrow" style="width: 14px; height: 14px;"></i>
+        </a>
+      </div>
+
+      <!-- Bottom route actions -->
+      <div class="route-panel-actions">
+        <button class="btn btn-secondary" style="width: 100%; justify-content: center;">
+          <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+          Upload CSV File
+        </button>
+        <button class="btn btn-primary" id="saveRouteButton" style="width: 100%; justify-content: center;" disabled>
+          Save Route
+        </button>
+      </div>
+    </div>
+
+    <!-- Drag handle to resize the left sidebar (shown only once plotting starts) -->
+    <div class="panel-resize-handle" id="panelResizeHandle" title="Drag to resize" style="display: none;"></div>
+
+    <!-- Map -->
+    <div class="route-map-area">
+      <!-- Secondary context bar: Organization › Depot (above the map only) -->
+      <div class="map-subbar">
+        <div class="breadcrumb">
+          <div class="breadcrumb-item">
+            <i data-lucide="building-2" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-link">Kolkata Metro Bus Services</span>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <i data-lucide="warehouse" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-link">Salt Lake Depot</span>
+            <span class="breadcrumb-separator">›</span>
+          </div>
+          <div class="breadcrumb-item">
+            <i data-lucide="route" style="width: 16px; height: 16px;"></i>
+            <span class="breadcrumb-current">Test-Route</span>
+          </div>
+        </div>
+      </div>
+      <div class="map-canvas">
+        <!-- Location search (design-system .search-input) -->
+        <div class="map-location-search">
+          <div class="search-input">
+            <input type="text" id="mapSearchInput" class="input"
+                   placeholder="Search location..." autocomplete="off" />
+          </div>
+        </div>
+        <div id="map"></div>
+
+        <!-- Floating route toolbar (bottom-center of the map). NEW component
+             built from tokens; the tools reuse the DS .btn-icon. -->
+        <div class="map-toolbar" id="mapToolbar" role="toolbar" aria-label="Route tools">
+          <button class="btn-icon" id="undoBtn" title="Undo" aria-label="Undo" disabled>
+            <i data-lucide="undo-2" style="width: 20px; height: 20px;"></i>
+          </button>
+          <button class="btn-icon" id="redoBtn" title="Redo" aria-label="Redo" disabled>
+            <i data-lucide="redo-2" style="width: 20px; height: 20px;"></i>
+          </button>
+          <span class="map-toolbar-sep" aria-hidden="true"></span>
+          <button class="btn-icon" id="zoomFitBtn" title="Zoom to fit route"
+                  aria-label="Zoom to fit route" disabled>
+            <i data-lucide="maximize" style="width: 20px; height: 20px;"></i>
+          </button>
+          <span class="map-toolbar-sep" aria-hidden="true"></span>
+          <div class="map-toolbar-color">
+            <button class="btn-icon" id="colorBtn" title="Route color"
+                    aria-label="Change route color" aria-haspopup="true" aria-expanded="false">
+              <i data-lucide="palette" style="width: 20px; height: 20px;"></i>
+            </button>
+            <!-- Swatch popover; backgrounds reference DS color tokens. Picking a
+                 swatch previews it live and keeps the popover open; Save commits. -->
+            <div class="color-popover" id="colorPopover" hidden>
+              <div class="color-swatches">
+                <button class="color-swatch" data-token="--text-primary" style="background: var(--text-primary);" title="Slate" aria-label="Slate"></button>
+                <button class="color-swatch" data-token="--primary" style="background: var(--primary);" title="Blue" aria-label="Blue"></button>
+                <button class="color-swatch" data-token="--route-indigo" style="background: var(--route-indigo);" title="Indigo" aria-label="Indigo"></button>
+                <button class="color-swatch" data-token="--route-violet" style="background: var(--route-violet);" title="Violet" aria-label="Violet"></button>
+                <button class="color-swatch" data-token="--route-magenta" style="background: var(--route-magenta);" title="Magenta" aria-label="Magenta"></button>
+                <button class="color-swatch" data-token="--danger" style="background: var(--danger);" title="Red" aria-label="Red"></button>
+                <button class="color-swatch" data-token="--warning" style="background: var(--warning);" title="Amber" aria-label="Amber"></button>
+                <button class="color-swatch" data-token="--route-teal" style="background: var(--route-teal);" title="Teal" aria-label="Teal"></button>
+                <button class="color-swatch" data-token="--success" style="background: var(--success);" title="Green" aria-label="Green"></button>
+              </div>
+              <div class="color-popover-footer">
+                <button class="btn btn-primary color-save" id="colorSaveBtn">
+                  <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+          <span class="map-toolbar-sep" aria-hidden="true"></span>
+          <button class="btn-icon" id="deleteBtn" title="Delete selected stop"
+                  aria-label="Delete selected stop" disabled>
+            <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+          </button>
+          <button class="btn-icon" id="clearBtn" title="Clear all stops"
+                  aria-label="Clear all stops" disabled>
+            <i data-lucide="eraser" style="width: 20px; height: 20px;"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       CREATE NEW ROUTE — details modal (reuses .modal component)
+       ============================================================ -->
+  <div class="modal-overlay" id="createRouteModal">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header" style="flex-direction: column; align-items: stretch; position: relative;">
+        <h2 class="modal-title">Create New Route</h2>
+        <p class="text-small" style="margin-top: var(--space-4);">Set up the route details before adding stops.</p>
+        <button class="btn-icon" onclick="closeCreateRoute()" aria-label="Close"
+                style="position: absolute; top: var(--space-16); right: var(--space-16);">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="return false;" autocomplete="off">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="cr-name">Route name</label>
+            <input type="text" id="cr-name" class="input" placeholder="e.g., Route 12" />
+            <span class="form-helper" id="cr-h-name">A short, recognizable name for this route.</span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCreateRoute()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateRoute()">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CSV FILE FORMAT — help modal (reuses .modal + .table)
+       ============================================================ -->
+  <div class="modal-overlay" id="csvFormatModal">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 class="modal-title">CSV file format</h2>
+        <button class="btn-icon" onclick="closeCsvFormat()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-small text-secondary" style="margin-bottom: var(--space-16);">
+          Save your stops as a <code>.csv</code> with one row per stop, in visiting order.
+          The first row must be the header shown below.
+        </p>
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr><th>sequence</th><th>stop_name</th><th>latitude</th><th>longitude</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Salt Lake Depot</td><td>22.5726</td><td>88.3639</td></tr>
+              <tr><td>2</td><td>City Centre</td><td>22.5810</td><td>88.4090</td></tr>
+              <tr><td>3</td><td>Sector V</td><td>22.5770</td><td>88.4330</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-small text-secondary" style="margin-top: var(--space-16); margin-bottom: 0;">
+          <strong>latitude</strong> and <strong>longitude</strong> are decimal degrees (WGS-84).
+          Stops are connected in ascending <strong>sequence</strong> order.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCsvFormat()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       EDIT ROUTE NAME — modal (reuses .modal + .form-group)
+       ============================================================ -->
+  <div class="modal-overlay" id="editRouteNameModal">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header" style="flex-direction: column; align-items: stretch; position: relative;">
+        <h2 class="modal-title">Edit route name</h2>
+        <p class="text-small" style="margin-top: var(--space-4);">Update the name used to identify this route.</p>
+        <button class="btn-icon" onclick="closeEditRouteName()" aria-label="Close"
+                style="position: absolute; top: var(--space-16); right: var(--space-16);">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="return false;" autocomplete="off">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="ern-name">Route name</label>
+            <input type="text" id="ern-name" class="input" placeholder="e.g., Route 12" />
+            <span class="form-helper" id="ern-h-name">A short, recognizable name for this route.</span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditRouteName()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditRouteName()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       LEAVE WITHOUT SAVING — confirmation (reuses .modal)
+       ============================================================ -->
+  <div class="modal-overlay" id="leaveRouteModal">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Leave without saving?</h2>
+        <button class="btn-icon" onclick="closeLeaveModal()" aria-label="Close">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-small text-secondary" style="margin: 0;">
+          You have unsaved changes to this route. Your draft is autosaved, so you
+          can come back to it — but you'll leave the builder now.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeLeaveModal()">Stay</button>
+        <button class="btn btn-primary" id="leaveConfirmBtn">Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    lucide.createIcons();
+
+    const map = L.map('map').setView([22.5726, 88.3639], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    /* Move the +/- zoom controls to the bottom-left of the map. */
+    map.zoomControl.setPosition('bottomleft');
+
+    /* ========================================================
+       LOCATION SEARCH — geocode via OpenStreetMap Nominatim,
+       then pan/zoom the map to the first match.
+       ======================================================== */
+    const mapSearchInput = document.getElementById('mapSearchInput');
+
+    mapSearchInput.addEventListener('keydown', async function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const q = mapSearchInput.value.trim();
+      if (!q) return;
+      try {
+        const res = await fetch(
+          'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q)
+        );
+        const data = await res.json();
+        if (!data.length) return;
+        const { lat, lon } = data[0];
+        /* Just reveal the area — no marker is placed. */
+        map.setView([parseFloat(lat), parseFloat(lon)], 16);
+      } catch (err) {
+        /* Network/geocoder error — leave the map as-is. */
+      }
+    });
+
+    /* ========================================================
+       CREATE NEW ROUTE modal — draft-first (nothing saved yet)
+       ======================================================== */
+    const createRouteModal = document.getElementById('createRouteModal');
+
+    function openCreateRoute() {
+      createRouteModal.classList.add('open');
+      lucide.createIcons();
+      document.getElementById('cr-name').focus();
+    }
+    function closeCreateRoute() {
+      createRouteModal.classList.remove('open');
+    }
+    createRouteModal.addEventListener('click', function (e) {
+      if (e.target === createRouteModal) closeCreateRoute();
+    });
+
+    /* ---- CSV file format help modal ---- */
+    const csvFormatModal = document.getElementById('csvFormatModal');
+    function openCsvFormat() {
+      csvFormatModal.classList.add('open');
+      lucide.createIcons();
+    }
+    function closeCsvFormat() {
+      csvFormatModal.classList.remove('open');
+    }
+    csvFormatModal.addEventListener('click', function (e) {
+      if (e.target === csvFormatModal) closeCsvFormat();
+    });
+
+    /* ---- Edit route name modal ---- */
+    const editRouteNameModal = document.getElementById('editRouteNameModal');
+    const routeNameLabel = document.getElementById('routeNameLabel');
+    const routeBreadcrumbName = document.querySelector('.breadcrumb .breadcrumb-current');
+
+    function openEditRouteName() {
+      const input = document.getElementById('ern-name');
+      input.value = routeNameLabel.textContent.trim();
+      crFieldError('ern-name', 'ern-h-name', false, '', 'A short, recognizable name for this route.');
+      editRouteNameModal.classList.add('open');
+      lucide.createIcons();
+      input.focus();
+      input.select();
+    }
+    function closeEditRouteName() {
+      editRouteNameModal.classList.remove('open');
+    }
+    editRouteNameModal.addEventListener('click', function (e) {
+      if (e.target === editRouteNameModal) closeEditRouteName();
+    });
+    function saveEditRouteName() {
+      const v = document.getElementById('ern-name').value.trim();
+      if (!v) {
+        crFieldError('ern-name', 'ern-h-name', true, 'Route name is required.');
+        return;
+      }
+      routeNameLabel.textContent = v;
+      if (routeBreadcrumbName) routeBreadcrumbName.textContent = v;  // keep breadcrumb in sync
+      closeEditRouteName();
+    }
+
+    function crFieldError(inputId, helperId, on, msg, base) {
+      document.getElementById(inputId).classList.toggle('error', on);
+      const h = document.getElementById(helperId);
+      h.classList.toggle('error', on);
+      h.textContent = on ? msg : base;
+    }
+
+    function submitCreateRoute() {
+      const name = document.getElementById('cr-name').value.trim();
+
+      if (!name) {
+        crFieldError('cr-name', 'cr-h-name', true, 'Route name is required.');
+        return;
+      }
+      crFieldError('cr-name', 'cr-h-name', false, '', 'A short, recognizable name for this route.');
+
+      /* Nothing is persisted here — hand the route name to the add-stops
+         workspace (route-build-mode.html) via sessionStorage. */
+      sessionStorage.setItem('routeDraft', JSON.stringify({ name: name }));
+      window.location.href = 'route-build-mode.html';
+    }
+
+    /* ========================================================
+       STOP PLOTTING — click anywhere on the map to drop a stop.
+       Each stop gets a scaled location_pin.svg marker and a row in
+       the sidebar (editable name input + delete button). The empty
+       guide is hidden while at least one stop exists.
+       ======================================================== */
+    const emptyGuide = document.getElementById('emptyGuide');
+    const stopsList  = document.getElementById('stopsList');
+    const stopsItems = document.getElementById('stopsItems');
+    const saveRouteButton = document.getElementById('saveRouteButton');
+    const summaryStopCount = document.getElementById('summaryStopCount');
+    const summaryDistance = document.getElementById('summaryDistance');
+
+    /* Live route summary — stop count + total drawn-route distance. */
+    function updateRouteSummary() {
+      summaryStopCount.textContent = stops.size;
+      summaryDistance.textContent = (typeof routeTotalDistance === 'number')
+        ? formatDistance(routeTotalDistance) : '—';
+    }
+
+    /* Scaled from the 67×76 source SVG; anchored at the pin tip (~33,54). */
+    const stopIcon = L.icon({
+      iconUrl: 'location_pin.svg',
+      iconSize: [40, 45],
+      iconAnchor: [20, 32],
+      popupAnchor: [0, -34], // open the warning popover just above the pin tip
+      className: 'stop-marker',
+    });
+    /* Selected variant — same SVG, 1.2× larger with a primary glow (see
+       .stop-marker-selected). Anchor keeps the same tip ratios so the pin
+       stays pinned to its latlng when swapped in. */
+    const stopIconSelected = L.icon({
+      iconUrl: 'location_pin.svg',
+      iconSize: [48, 54],
+      iconAnchor: [24, 38],
+      popupAnchor: [0, -40],
+      className: 'stop-marker stop-marker-selected',
+    });
+
+    let stopSeq = 0;           // only increments → unique default names
+    const stops = new Map();   // id → { marker, row }
+    let selectedStopId = null; // the stop currently selected (map pin + sidebar row)
+
+    /* Resolve a CSS custom property to its value (needed because Leaflet paints
+       the route stroke as a literal color, not a CSS var). */
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    let routeColor = cssVar('--text-primary') || '#1A1D23'; // drawn route line color
+    let routeTotalDistance = null;  // metres of the drawn route (for the summary)
+    const undoStack = [];      // pre-change state snapshots (see snapshotState)
+    const redoStack = [];
+    let routeLayer = null;
+    let arrowLayer = null;
+    let routeRequestController = null;
+    let routeRequestSeq = 0;
+
+    /* Chevron badge pointing east by default; rotated to the segment bearing. */
+    function arrowIcon(angle) {
+      return L.divIcon({
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        html:
+          '<div class="route-arrow-badge" style="transform: rotate(' + angle + 'deg);">' +
+            '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+            'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' +
+            '<polyline points="5 6 11 12 5 18"></polyline>' +
+            '<polyline points="12 6 18 12 12 18"></polyline></svg>' +
+          '</div>',
+      });
+    }
+
+    /* Metres → short human label: "650 m" under 1 km, else "1.2 km". */
+    function formatDistance(m) {
+      if (typeof m !== 'number') return '';
+      if (m < 1000) return Math.round(m) + ' m';
+      return (m / 1000).toFixed(1) + ' km';
+    }
+
+    /* Floating distance pill dropped at a leg midpoint (centered + lifted in CSS). */
+    function distanceIcon(text) {
+      return L.divIcon({
+        className: 'route-distance-marker',
+        iconSize: null,
+        iconAnchor: [0, 0],
+        html: '<span class="route-distance-badge">' + text + '</span>',
+      });
+    }
+
+    /* Point halfway along a leg (by path length), plus the two coords around
+       it so the travel direction can be read. coords are OSRM [lng, lat]. */
+    function legMidpoint(coords) {
+      const segLen = [];
+      let total = 0;
+      for (let i = 1; i < coords.length; i++) {
+        const dx = coords[i][0] - coords[i - 1][0];
+        const dy = coords[i][1] - coords[i - 1][1];
+        const d = Math.sqrt(dx * dx + dy * dy);
+        segLen.push(d);
+        total += d;
+      }
+      const half = total / 2;
+      let acc = 0, i = 1;
+      for (; i < coords.length - 1; i++) {
+        if (acc + segLen[i - 1] >= half) break;
+        acc += segLen[i - 1];
+      }
+      const a = coords[i - 1], b = coords[i];
+      const seg = segLen[i - 1] || 0;
+      const t = seg ? (half - acc) / seg : 0;
+      return {
+        latlng: L.latLng(a[1] + (b[1] - a[1]) * t, a[0] + (b[0] - a[0]) * t),
+        a: L.latLng(a[1], a[0]),
+        b: L.latLng(b[1], b[0]),
+      };
+    }
+
+    function clearArrows() {
+      if (arrowLayer) {
+        map.removeLayer(arrowLayer);
+        arrowLayer = null;
+      }
+    }
+
+    function drawLegArrows(legs) {
+      clearArrows();
+      const markers = [];
+      (legs || []).forEach(function (leg) {
+        let coords = [];
+        (leg.steps || []).forEach(function (step) {
+          if (step.geometry && step.geometry.coordinates) {
+            coords = coords.concat(step.geometry.coordinates);
+          }
+        });
+        if (coords.length < 2) return;
+        const mid = legMidpoint(coords);
+        /* Screen-space bearing (y grows downward) — chevron points east at 0. */
+        const p1 = map.latLngToLayerPoint(mid.a);
+        const p2 = map.latLngToLayerPoint(mid.b);
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+        markers.push(L.marker(mid.latlng, { icon: arrowIcon(angle), interactive: false }));
+        /* Distance pill for this segment, sitting just above the chevron. */
+        const label = formatDistance(leg.distance);
+        if (label) {
+          markers.push(L.marker(mid.latlng, { icon: distanceIcon(label), interactive: false }));
+        }
+      });
+      if (markers.length) arrowLayer = L.layerGroup(markers).addTo(map);
+    }
+
+    function refreshStopsVisibility() {
+      const has = stops.size > 0;
+      emptyGuide.style.display = has ? 'none' : '';
+      stopsList.style.display  = has ? 'block' : 'none';
+      /* Resizing is only available once the user starts plotting stops.
+         Back to empty → hide the handle and restore the original width. */
+      panelResizeHandle.style.display = has ? 'block' : 'none';
+      saveRouteButton.disabled = stops.size < 2;
+      if (!has) document.documentElement.style.setProperty('--panel-width', '600px');
+      updateToolbarState();
+      updateRouteSummary();
+      map.invalidateSize();
+    }
+
+    /* Build a stop's marker + sidebar row for a known id / name / position.
+       Shared by addStop (new stops) and undo/redo (rebuilding from a snapshot);
+       it deliberately does NOT touch stopSeq or the history stacks. */
+    function createStop(id, latlng, name) {
+      const marker = L.marker(latlng, { icon: stopIcon }).addTo(map);
+      const lat = latlng.lat.toFixed(6);
+      const lng = latlng.lng.toFixed(6);
+      const num = stops.size + 1;  // provisional — refreshStopNumbers sets the real one
+
+      const row = document.createElement('div');
+      row.className = 'stop-row';
+      row.dataset.id = id;
+      row.innerHTML =
+        '<div class="stop-row-marker">' +
+          '<span class="badge badge-info stop-row-index" aria-label="Stop number ' + num + '">' + num + '</span>' +
+          '<span class="stop-row-line" aria-hidden="true"></span>' +
+        '</div>' +
+        '<div class="stop-row-content">' +
+          '<input type="text" class="input" aria-label="Stop ' + num + ' name" />' +
+          '<div class="stop-coordinates" aria-label="Stop ' + num + ' coordinates">' +
+            '<span>Lat ' + lat + '</span>' +
+            '<span>Long ' + lng + '</span>' +
+          '</div>' +
+          '<div class="stop-distance" hidden aria-label="Distance to next stop">' +
+            '<i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i>' +
+            '<span class="stop-distance-value"></span>' +
+          '</div>' +
+          '<div class="stop-warning" hidden>' +
+            '<span class="stop-warning-text">' +
+              '<i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i>' +
+              '<span class="stop-warning-msg">Not on a road.</span>' +
+            '</span>' +
+            '<button type="button" class="link-button stop-warning-fix">Move to road</button>' +
+          '</div>' +
+        '</div>' +
+        '<button class="btn-icon" title="Delete stop" aria-label="Delete stop">' +
+          '<i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>' +
+        '</button>';
+      const nameInput = row.querySelector('.input');
+      nameInput.value = name;  // set as a property to avoid HTML-escaping the name
+
+      row.querySelector('.btn-icon').addEventListener('click', function () {
+        deleteStop(id);
+      });
+      row.querySelector('.stop-warning-fix').addEventListener('click', function () {
+        snapStopToRoad(id);
+      });
+
+      /* Renaming is undoable: snapshot the pre-edit state on focus, commit it to
+         the undo stack on change only if the value actually changed. */
+      let nameBefore = null;
+      nameInput.addEventListener('focus', function () { nameBefore = snapshotState(); });
+      nameInput.addEventListener('change', function () {
+        if (nameBefore) { commitHistory(nameBefore); nameBefore = null; }
+        markChanged();  // persist the renamed stop
+      });
+
+      /* Hover info tooltip (name / number / coords); becomes permanent while the
+         stop is selected (see selectStop). */
+      bindStopTooltip(marker, id, false);
+      /* Click the pin → toggle selection (click again to return to normal). */
+      marker.on('click', function () {
+        if (selectedStopId === id) clearSelection();
+        else selectStop(id);
+      });
+
+      /* Sidebar row: hover previews the pin's tooltip; clicking selects the
+         stop (ignoring clicks on the name field and the row's buttons). */
+      row.addEventListener('mouseenter', function () {
+        if (selectedStopId !== id) marker.openTooltip();
+      });
+      row.addEventListener('mouseleave', function () {
+        if (selectedStopId !== id) marker.closeTooltip();
+      });
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('button') || e.target.closest('.input')) return;
+        selectStop(id);
+        map.panTo(marker.getLatLng());
+      });
+
+      stopsItems.appendChild(row);
+      stops.set(id, { marker, row, flagged: false, snapTarget: null, offRoadDistance: null });
+      return id;
+    }
+
+    function addStop(latlng) {
+      /* Dropping a new stop starts a fresh plot — drop any previous selection. */
+      clearSelection();
+      pushHistory();  // snapshot the state BEFORE adding, so this is undoable
+      const id = 'stop-' + (++stopSeq);
+      createStop(id, latlng, 'Stop_Name_' + stopSeq);
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      lucide.createIcons();
+
+      /* Validate this placement when the next /route response lands. */
+      pendingPopupStopId = id;
+      updateRoadRoute();
+    }
+
+    function refreshStopNumbers() {
+      stopsItems.querySelectorAll('.stop-row').forEach(function (row, index, all) {
+        const stopNumber = index + 1;
+        const numberLabel = row.querySelector('.stop-row-index');
+        const nameInput = row.querySelector('.input');
+        const coordinates = row.querySelector('.stop-coordinates');
+
+        numberLabel.textContent = stopNumber;
+        numberLabel.setAttribute('aria-label', 'Stop number ' + stopNumber);
+        nameInput.setAttribute('aria-label', 'Stop ' + stopNumber + ' name');
+        coordinates.setAttribute('aria-label', 'Stop ' + stopNumber + ' coordinates');
+        /* Last stop ends the route line (no segment drawn below it). */
+        row.classList.toggle('is-last', index === all.length - 1);
+      });
+    }
+
+    /* ========================================================
+       STOP SELECTION — clicking a pin or a sidebar row selects that stop:
+       the pin swaps to the enlarged/glowing icon, the row is highlighted, and
+       an info tooltip (name / number / coords) is shown. Hovering shows the
+       same tooltip without selecting.
+       ======================================================== */
+    function escapeHtml(s) {
+      return s.replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    /* 1-based position of a stop in the current (DOM) order. */
+    function stopNumber(id) {
+      const rows = Array.from(stopsItems.querySelectorAll('.stop-row'));
+      return rows.findIndex(function (r) { return r.dataset.id === id; }) + 1;
+    }
+
+    function stopTooltipHtml(id) {
+      const entry = stops.get(id);
+      if (!entry) return '';
+      const num = stopNumber(id);
+      const name = entry.row.querySelector('.input').value.trim() || ('Stop ' + num);
+      const ll = entry.marker.getLatLng();
+      return '<div class="stop-info-name">' + escapeHtml(name) + '</div>' +
+        '<div class="stop-info-meta">Stop ' + num + '</div>' +
+        '<div class="stop-info-coords">' +
+          '<span>Lat ' + ll.lat.toFixed(6) + '</span>' +
+          '<span>Long ' + ll.lng.toFixed(6) + '</span>' +
+        '</div>';
+    }
+
+    /* (Re)bind the info tooltip to a marker. Hover tooltips (permanent:false)
+       open on mouseover; while a stop is selected we rebind as permanent so the
+       tooltip can't be dismissed by the mouseout that fires when setIcon swaps
+       the pin's element. Content is a function so it stays live. */
+    const TOOLTIP_OPTS = { className: 'stop-info-tooltip', direction: 'top', offset: [0, -34], opacity: 1 };
+    function bindStopTooltip(marker, id, permanent) {
+      marker.unbindTooltip();
+      marker.bindTooltip(function () { return stopTooltipHtml(id); },
+        Object.assign({}, TOOLTIP_OPTS, { permanent: !!permanent }));
+    }
+
+    function selectStop(id) {
+      const entry = stops.get(id);
+      if (!entry) return;
+      if (selectedStopId && selectedStopId !== id) clearSelection();
+      selectedStopId = id;
+      entry.marker.setIcon(stopIconSelected);
+      /* Permanent while selected → survives the setIcon mouseout and stays up. */
+      bindStopTooltip(entry.marker, id, true);
+      entry.marker.openTooltip();
+      entry.row.scrollIntoView({ block: 'nearest' });
+      updateToolbarState();  // the delete tool acts on the selected stop
+    }
+
+    function clearSelection() {
+      if (!selectedStopId) return;
+      const id = selectedStopId;
+      const entry = stops.get(id);
+      selectedStopId = null;
+      if (entry) {
+        entry.marker.setIcon(stopIcon);
+        bindStopTooltip(entry.marker, id, false);  // back to a (closed) hover tooltip
+      }
+      updateToolbarState();
+    }
+
+    function deleteStop(id) {
+      const entry = stops.get(id);
+      if (!entry) return;
+      pushHistory();  // snapshot BEFORE removing, so the delete is undoable
+      if (selectedStopId === id) selectedStopId = null;  // marker/row go away below
+      map.removeLayer(entry.marker);
+      entry.row.remove();
+      stops.delete(id);
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      updateRoadRoute();
+    }
+
+    /* ========================================================
+       OFF-ROAD VALIDATION — derived from the SAME /route response we already
+       fetch to draw the line. OSRM returns a `waypoints` array (one per stop,
+       in order) where each carries `distance` (metres the stop was snapped to
+       reach a road) and `location` (the snapped point). Beyond the tolerance
+       the stop is flagged (warning badge + inline note) and a map popover
+       offers to move it onto the nearest road. Snapping is always the user's
+       choice — a stop is never moved automatically.
+       ======================================================== */
+    const OFFROAD_TOLERANCE_M = 25;
+    let pendingPopupStopId = null;   // stop just placed → auto-open its popover if flagged
+
+    function applyOffRoadValidation(waypoints) {
+      if (!waypoints) return;
+      /* stops is a Map — keys() and the coordinates sent to OSRM share order. */
+      Array.from(stops.keys()).forEach(function (id, i) {
+        const entry = stops.get(id);
+        const wp = waypoints[i];
+        if (!entry || !wp) return;
+
+        if (typeof wp.distance === 'number' && wp.distance > OFFROAD_TOLERANCE_M) {
+          entry.snapTarget = L.latLng(wp.location[1], wp.location[0]);
+          entry.offRoadDistance = Math.round(wp.distance);
+          setStopFlagged(id, true);
+        } else {
+          entry.snapTarget = null;
+          entry.offRoadDistance = null;
+          setStopFlagged(id, false);
+        }
+      });
+
+      /* Surface the popover only for the stop the user just dropped. */
+      if (pendingPopupStopId) {
+        const entry = stops.get(pendingPopupStopId);
+        if (entry && entry.flagged) openStopWarningPopup(pendingPopupStopId);
+        pendingPopupStopId = null;
+      }
+    }
+
+    function setStopFlagged(id, on) {
+      const entry = stops.get(id);
+      if (!entry) return;
+      entry.flagged = on;
+
+      const badge = entry.row.querySelector('.stop-row-index');
+      badge.classList.toggle('badge-warning', on);
+      badge.classList.toggle('badge-info', !on);
+
+      const warn = entry.row.querySelector('.stop-warning');
+      warn.hidden = !on;
+      if (on) {
+        warn.querySelector('.stop-warning-msg').textContent =
+          'About ' + entry.offRoadDistance + ' m from the nearest road.';
+      }
+    }
+
+    function openStopWarningPopup(id) {
+      const entry = stops.get(id);
+      if (!entry) return;
+
+      const html =
+        '<div class="stop-popover">' +
+          '<div class="stop-popover-head">' +
+            '<i data-lucide="alert-triangle" style="width: 20px; height: 20px;"></i>' +
+            '<span class="stop-popover-title">Stop isn\'t on a road</span>' +
+          '</div>' +
+          '<div class="stop-popover-sub">About ' + entry.offRoadDistance +
+            ' m from the nearest road. A bus can\'t stop here.</div>' +
+          '<div class="stop-popover-actions">' +
+            '<button type="button" class="btn btn-primary stop-popover-move">' +
+              '<i data-lucide="route" style="width: 16px; height: 16px;"></i>' +
+              'Move to nearest road</button>' +
+          '</div>' +
+        '</div>';
+
+      entry.marker
+        .bindPopup(html, {
+          className: 'stop-warning-popup',
+          closeButton: false,
+          offset: [0, 0],
+          maxWidth: 260,
+          autoPanPadding: [24, 24],
+        })
+        .openPopup();
+      lucide.createIcons();
+
+      const el = entry.marker.getPopup().getElement();
+      el.querySelector('.stop-popover-move').addEventListener('click', function () {
+        snapStopToRoad(id);
+      });
+    }
+
+    function snapStopToRoad(id) {
+      const entry = stops.get(id);
+      if (!entry || !entry.snapTarget) return;
+      pushHistory();  // moving the stop onto the road is undoable
+
+      const target = entry.snapTarget;
+      entry.marker.setLatLng(target);
+
+      const coords = entry.row.querySelector('.stop-coordinates');
+      coords.children[0].textContent = 'Lat ' + target.lat.toFixed(6);
+      coords.children[1].textContent = 'Long ' + target.lng.toFixed(6);
+
+      entry.snapTarget = null;
+      entry.offRoadDistance = null;
+      setStopFlagged(id, false);
+      entry.marker.closePopup();
+      updateRoadRoute();
+    }
+
+    function clearRoadRoute() {
+      if (routeLayer) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+      }
+      routeTotalDistance = null;
+      updateRouteSummary();
+    }
+
+    /* ========================================================
+       STOP-TO-STOP DISTANCES — read straight from the OSRM `legs` of the route
+       we already drew (leg[i] = the road distance from drawn stop i to i+1), so
+       no extra request. Stored on each stop as the distance to the NEXT one,
+       then surfaced as a timeline connector in the sidebar.
+       ======================================================== */
+    function applyStopDistances(usedStops, legs) {
+      stops.forEach(function (e) { e.nextDistance = null; });
+      (legs || []).forEach(function (leg, i) {
+        const from = usedStops[i];
+        const entry = from && stops.get(from.id);
+        if (entry) entry.nextDistance = leg.distance;
+      });
+      renderDistances();
+    }
+
+    function renderDistances() {
+      const rows = Array.from(stopsItems.querySelectorAll('.stop-row'));
+      rows.forEach(function (row, i) {
+        const el = row.querySelector('.stop-distance');
+        if (!el) return;
+        const entry = stops.get(row.dataset.id);
+        const nextEntry = rows[i + 1] ? stops.get(rows[i + 1].dataset.id) : null;
+        /* Label the segment only when both ends are on-road (a flagged stop
+           breaks the connection) and a distance has actually been computed. */
+        if (entry && nextEntry && !entry.flagged && !nextEntry.flagged &&
+            typeof entry.nextDistance === 'number') {
+          el.querySelector('.stop-distance-value').textContent = formatDistance(entry.nextDistance);
+          el.hidden = false;
+        } else {
+          el.querySelector('.stop-distance-value').textContent = '';
+          el.hidden = true;
+        }
+      });
+    }
+
+    function clearDistances() {
+      stops.forEach(function (e) { e.nextDistance = null; });
+      stopsItems.querySelectorAll('.stop-distance').forEach(function (el) {
+        el.querySelector('.stop-distance-value').textContent = '';
+        el.hidden = true;
+      });
+    }
+
+    function routeUrl(latlngs) {
+      const coordinates = latlngs.map(function (p) {
+        return p.lng + ',' + p.lat;
+      }).join(';');
+      return 'https://router.project-osrm.org/route/v1/driving/' + coordinates +
+        '?overview=full&geometries=geojson&steps=true&continue_straight=false';
+    }
+
+    function drawRoute(data) {
+      clearRoadRoute();
+      routeLayer = L.geoJSON(data.routes[0].geometry, {
+        style: {
+          color: routeColor, /* set via the toolbar color picker; default --text-primary */
+          weight: 5,
+          opacity: 0.8
+        }
+      }).addTo(map);
+      routeTotalDistance = data.routes[0].distance;  // metres, for the summary
+      updateRouteSummary();
+      drawLegArrows(data.routes[0].legs);
+    }
+
+    async function updateRoadRoute() {
+      markChanged();  // any route recompute follows a stop change → autosave
+      const ordered = Array.from(stops.entries()).map(function (e) {
+        return { id: e[0], latlng: e[1].marker.getLatLng() };
+      });
+      const requestSeq = ++routeRequestSeq;
+
+      if (routeRequestController) routeRequestController.abort();
+      routeRequestController = new AbortController();
+      const signal = routeRequestController.signal;
+
+      if (ordered.length < 2) {
+        clearRoadRoute();
+        clearArrows();
+        clearDistances();
+        pendingPopupStopId = null;   // nothing to route/validate yet
+        return;
+      }
+
+      try {
+        /* Pass 1 — route through ALL stops, used only to read how far each was
+           snapped (validation). Its geometry is intentionally NOT drawn, since
+           it would connect to off-road stops at their snapped points. */
+        const res = await fetch(routeUrl(ordered.map(function (o) { return o.latlng; })), { signal: signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (requestSeq !== routeRequestSeq || !data.routes || !data.routes.length) return;
+
+        applyOffRoadValidation(data.waypoints);
+
+        /* The drawn line connects only on-road stops, in order — a flagged
+           stop stays a lone pin until the user moves it onto a road. */
+        const onRoad = ordered.filter(function (o) {
+          const entry = stops.get(o.id);
+          return entry && !entry.flagged;
+        });
+
+        if (onRoad.length === ordered.length) {
+          drawRoute(data);                      // nothing flagged → reuse pass 1
+          applyStopDistances(ordered, data.routes[0].legs);
+        } else if (onRoad.length >= 2) {
+          /* Pass 2 — clean route through valid stops only. */
+          const res2 = await fetch(routeUrl(onRoad.map(function (o) { return o.latlng; })), { signal: signal });
+          if (!res2.ok) return;
+          const data2 = await res2.json();
+          if (requestSeq !== routeRequestSeq || !data2.routes || !data2.routes.length) return;
+          drawRoute(data2);
+          applyStopDistances(onRoad, data2.routes[0].legs);
+        } else {
+          clearRoadRoute();                     // fewer than 2 valid stops → no line
+          clearArrows();
+          clearDistances();
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          clearRoadRoute();
+          clearArrows();
+          clearDistances();
+        }
+      }
+    }
+
+    map.on('click', function (e) {
+      addStop(e.latlng);
+    });
+
+    /* ========================================================
+       RESIZABLE LEFT SIDEBAR — drag the handle on its right edge.
+       ======================================================== */
+    const routePanel = document.getElementById('routePanel');
+    const panelResizeHandle = document.getElementById('panelResizeHandle');
+    /* 600px = original width = minimum (grow-only, never smaller). */
+    const PANEL_MIN = 600, PANEL_MAX = 860;
+    let resizing = false, handleHover = false;
+
+    function setDividerActive(on) {
+      document.body.classList.toggle('panel-divider-active', on);
+    }
+
+    panelResizeHandle.addEventListener('mouseenter', function () {
+      handleHover = true;
+      setDividerActive(true);
+    });
+    panelResizeHandle.addEventListener('mouseleave', function () {
+      handleHover = false;
+      if (!resizing) setDividerActive(false);
+    });
+
+    panelResizeHandle.addEventListener('mousedown', function (e) {
+      resizing = true;
+      panelResizeHandle.classList.add('dragging');
+      setDividerActive(true);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!resizing) return;
+      const left = routePanel.getBoundingClientRect().left;
+      let w = Math.round(e.clientX - left);
+      w = Math.max(PANEL_MIN, Math.min(PANEL_MAX, w));
+      /* Drive both the panel and the top-bar brand column via one variable. */
+      document.documentElement.style.setProperty('--panel-width', w + 'px');
+      map.invalidateSize();
+    });
+    document.addEventListener('mouseup', function () {
+      if (!resizing) return;
+      resizing = false;
+      panelResizeHandle.classList.remove('dragging');
+      if (!handleHover) setDividerActive(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      map.invalidateSize();
+    });
+
+    /* ========================================================
+       ROUTE TOOLBAR — floating undo / redo / zoom-to-fit / color / delete /
+       clear. Undo/redo work on lightweight stop snapshots (each stop's id,
+       position and name, plus the stop counter); restoring clears the canvas,
+       rebuilds the stops via createStop, and re-runs validation so warnings/
+       distances recompute. Stop-mutating actions (add/delete/snap/rename/clear)
+       push a pre-change snapshot via pushHistory; route color is NOT undoable.
+       ======================================================== */
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const zoomFitBtn = document.getElementById('zoomFitBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const colorBtn = document.getElementById('colorBtn');
+    const colorPopover = document.getElementById('colorPopover');
+    const colorSaveBtn = document.getElementById('colorSaveBtn');
+
+    function snapshotState() {
+      return {
+        seq: stopSeq,
+        stops: Array.from(stops.entries()).map(function (e) {
+          const ll = e[1].marker.getLatLng();
+          return { id: e[0], lat: ll.lat, lng: ll.lng, name: e[1].row.querySelector('.input').value };
+        }),
+      };
+    }
+
+    /* Record a pre-change snapshot; a new action invalidates the redo branch. */
+    function pushHistory() { commitHistory(snapshotState()); }
+    function commitHistory(snap) {
+      undoStack.push(snap);
+      redoStack.length = 0;
+      updateToolbarState();
+    }
+
+    function applyState(snap) {
+      clearSelection();
+      Array.from(stops.keys()).forEach(function (id) {
+        map.removeLayer(stops.get(id).marker);
+        stops.get(id).row.remove();
+      });
+      stops.clear();
+      stopSeq = snap.seq;
+      /* Route color is intentionally NOT part of history — it stays as the user
+         last set it through undo/redo. */
+      snap.stops.forEach(function (s) {
+        createStop(s.id, L.latLng(s.lat, s.lng), s.name);
+      });
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      lucide.createIcons();
+      updateRoadRoute();
+    }
+
+    function undo() {
+      if (!undoStack.length) return;
+      redoStack.push(snapshotState());
+      applyState(undoStack.pop());
+      updateToolbarState();
+    }
+    function redo() {
+      if (!redoStack.length) return;
+      undoStack.push(snapshotState());
+      applyState(redoStack.pop());
+      updateToolbarState();
+    }
+
+    function setRouteColor(color) {
+      routeColor = color;
+      if (routeLayer) routeLayer.setStyle({ color: color });  // recolor live, no refetch
+      colorPopover.querySelectorAll('.color-swatch').forEach(function (sw) {
+        sw.classList.toggle('active', cssVar(sw.dataset.token) === color);
+      });
+    }
+
+    function updateToolbarState() {
+      undoBtn.disabled = undoStack.length === 0;
+      redoBtn.disabled = redoStack.length === 0;
+      deleteBtn.disabled = !selectedStopId;
+      zoomFitBtn.disabled = stops.size === 0;
+      clearBtn.disabled = stops.size === 0;
+    }
+
+    /* Frame all stops in view. */
+    function zoomToFit() {
+      if (!stops.size) return;
+      const group = L.featureGroup(Array.from(stops.values()).map(function (e) { return e.marker; }));
+      map.fitBounds(group.getBounds(), { padding: [48, 48] });
+    }
+
+    /* Remove every stop (undoable). Mirrors applyState's teardown, then lets
+       updateRoadRoute clear the line/arrows/distances (fewer than 2 stops). */
+    function clearAllStops() {
+      if (!stops.size) return;
+      pushHistory();
+      clearSelection();
+      Array.from(stops.keys()).forEach(function (id) {
+        map.removeLayer(stops.get(id).marker);
+        stops.get(id).row.remove();
+      });
+      stops.clear();
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      updateRoadRoute();
+    }
+
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+    zoomFitBtn.addEventListener('click', zoomToFit);
+    clearBtn.addEventListener('click', clearAllStops);
+    deleteBtn.addEventListener('click', function () {
+      if (selectedStopId) deleteStop(selectedStopId);
+    });
+
+    /* Color picker popover. Picking a swatch previews the color live on the
+       route and keeps the popover open; Save commits and closes. Dismissing any
+       other way (click outside / color button again) cancels back to the color
+       that was active when the popover opened. */
+    let colorBeforeOpen = null;  // committed color at open time, for cancel/revert
+
+    function openColorPopover() {
+      colorBeforeOpen = routeColor;
+      colorPopover.hidden = false;
+      colorBtn.setAttribute('aria-expanded', 'true');
+    }
+    function commitColor() {           // Save
+      if (colorBeforeOpen !== null && routeColor !== colorBeforeOpen) markChanged();
+      colorBeforeOpen = null;
+      closeColorPopover();
+    }
+    function cancelColor() {           // dismiss without saving → revert preview
+      if (colorBeforeOpen !== null) setRouteColor(colorBeforeOpen);
+      colorBeforeOpen = null;
+      closeColorPopover();
+    }
+    function closeColorPopover() {
+      colorPopover.hidden = true;
+      colorBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    colorBtn.addEventListener('click', function (e) {
+      e.stopPropagation();  // keep the outside-click handler from firing on this click
+      if (colorPopover.hidden) openColorPopover();
+      else cancelColor();
+    });
+    colorPopover.addEventListener('click', function (e) {
+      const sw = e.target.closest('.color-swatch');
+      if (!sw) return;
+      const color = cssVar(sw.dataset.token);
+      if (color) setRouteColor(color);  // live preview; stays open until Save
+    });
+    colorSaveBtn.addEventListener('click', commitColor);
+    document.addEventListener('click', function (e) {
+      if (!colorPopover.hidden && !colorPopover.contains(e.target) && !colorBtn.contains(e.target)) {
+        cancelColor();
+      }
+    });
+
+    /* Reflect the initial color + button states. */
+    setRouteColor(routeColor);
+    updateToolbarState();
+
+    /* ========================================================
+       AUTOSAVE & UNSAVED-CHANGES GUARD.
+       The in-progress route is autosaved to sessionStorage on every change and
+       restored on reload. Leaving with unsaved changes is guarded: the in-app
+       "Back to routes" link shows a DS confirmation modal, and a native
+       beforeunload prompt covers tab close / refresh (that one is browser-drawn
+       and can't be DS-styled). Saving clears the dirty flag and the draft.
+       ======================================================== */
+    const DRAFT_KEY = 'routeAutosaveDraft';
+    let isDirty = false;
+    let leavingIntentionally = false;
+
+    function serializeDraft() {
+      return {
+        name: routeNameLabel.textContent.trim(),
+        color: routeColor,
+        seq: stopSeq,
+        stops: Array.from(stops.entries()).map(function (e) {
+          const ll = e[1].marker.getLatLng();
+          return { id: e[0], lat: ll.lat, lng: ll.lng, name: e[1].row.querySelector('.input').value };
+        }),
+      };
+    }
+
+    function autosave() {
+      try {
+        if (stops.size) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(serializeDraft()));
+        else sessionStorage.removeItem(DRAFT_KEY);
+      } catch (e) { /* storage unavailable — ignore */ }
+    }
+    function markChanged() { isDirty = true; autosave(); }
+    function hasUnsavedChanges() { return isDirty && stops.size > 0; }
+
+    /* Transient toast (reuses the DS .toast; auto-dismisses). */
+    function showToast(message, icon) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.innerHTML = '<i data-lucide="' + (icon || 'info') + '" style="width: 20px; height: 20px;"></i>' +
+                    '<span>' + message + '</span>';
+      document.body.appendChild(t);
+      lucide.createIcons();
+      setTimeout(function () { t.remove(); }, 3000);
+    }
+
+    function restoreDraft() {
+      let draft;
+      try { draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY)); } catch (e) { return; }
+      if (!draft || !Array.isArray(draft.stops) || !draft.stops.length) return;
+      if (draft.name) {
+        routeNameLabel.textContent = draft.name;
+        if (routeBreadcrumbName) routeBreadcrumbName.textContent = draft.name;
+      }
+      if (draft.color) setRouteColor(draft.color);
+      stopSeq = draft.seq || draft.stops.length;
+      draft.stops.forEach(function (s) {
+        createStop(s.id, L.latLng(s.lat, s.lng), s.name);
+      });
+      refreshStopNumbers();
+      refreshStopsVisibility();
+      lucide.createIcons();
+      updateRoadRoute();
+      showToast('Draft restored', 'rotate-ccw');
+    }
+
+    /* Save Route — marks the route saved (clears the dirty flag + draft). */
+    saveRouteButton.addEventListener('click', function () {
+      if (saveRouteButton.disabled) return;
+      isDirty = false;
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {}
+      showToast('Route saved', 'check');
+    });
+
+    /* Leave-without-saving guard on the in-app back link. */
+    const leaveRouteModal = document.getElementById('leaveRouteModal');
+    const leaveConfirmBtn = document.getElementById('leaveConfirmBtn');
+    const backLink = document.querySelector('.route-panel-back');
+    let pendingLeaveHref = null;
+
+    function closeLeaveModal() { leaveRouteModal.classList.remove('open'); }
+    leaveRouteModal.addEventListener('click', function (e) {
+      if (e.target === leaveRouteModal) closeLeaveModal();
+    });
+    backLink.addEventListener('click', function (e) {
+      if (!hasUnsavedChanges()) return;         // nothing to lose → navigate normally
+      e.preventDefault();
+      pendingLeaveHref = backLink.getAttribute('href');
+      leaveRouteModal.classList.add('open');
+      lucide.createIcons();
+    });
+    leaveConfirmBtn.addEventListener('click', function () {
+      leavingIntentionally = true;              // skip the beforeunload prompt
+      window.location.href = pendingLeaveHref || 'flow-b-3-routes-table.html';
+    });
+
+    /* Native fallback for tab close / refresh (browser-drawn, not DS-styled). */
+    window.addEventListener('beforeunload', function (e) {
+      if (leavingIntentionally || !hasUnsavedChanges()) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    /* Restore any autosaved draft left from a previous session. */
+    restoreDraft();
+  </script>
+</body>
+</html>

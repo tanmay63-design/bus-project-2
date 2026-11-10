@@ -199,7 +199,7 @@
               Bus routes operating from this depot
             </p>
           </div>
-          <button class="btn btn-primary" onclick="window.location.href='route-map.html'">
+          <button class="btn btn-primary" onclick="openCreateRoute()">
             <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
             Create route
           </button>
@@ -212,7 +212,7 @@
           <p class="empty-state-description">
             Create your first bus route from this depot. You'll be able to design the route on a map and configure all stops.
           </p>
-          <button class="btn btn-primary" onclick="window.location.href='route-map.html'">
+          <button class="btn btn-primary" onclick="openCreateRoute()">
             <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
             Create your first route
           </button>
@@ -278,6 +278,71 @@
     document.getElementById('addDepotModal').addEventListener('click', function(e) {
       if (e.target === this) closeAddDepotModal();
     });
+  </script>
+
+  <!-- ============================================================
+       CREATE NEW ROUTE — details modal (same as route-map.html)
+       ============================================================ -->
+  <div class="modal-overlay" id="createRouteModal">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header" style="flex-direction: column; align-items: stretch; position: relative;">
+        <h2 class="modal-title">Create New Route</h2>
+        <p class="text-small" style="margin-top: var(--space-4);">Set up the route details before adding stops.</p>
+        <button class="btn-icon" onclick="closeCreateRoute()" aria-label="Close"
+                style="position: absolute; top: var(--space-16); right: var(--space-16);">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="return false;" autocomplete="off">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="cr-name">Route name</label>
+            <input type="text" id="cr-name" class="input" placeholder="e.g., Route 12" />
+            <span class="form-helper" id="cr-h-name">A short, recognizable name for this route.</span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCreateRoute()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateRoute()">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Create New Route modal — same behavior as route-map.html */
+    const createRouteModal = document.getElementById('createRouteModal');
+    function openCreateRoute() {
+      createRouteModal.classList.add('open');
+      lucide.createIcons();
+      document.getElementById('cr-name').focus();
+    }
+    function closeCreateRoute() {
+      createRouteModal.classList.remove('open');
+    }
+    createRouteModal.addEventListener('click', function (e) {
+      if (e.target === createRouteModal) closeCreateRoute();
+    });
+    function crFieldError(inputId, helperId, on, msg, base) {
+      document.getElementById(inputId).classList.toggle('error', on);
+      const h = document.getElementById(helperId);
+      h.classList.toggle('error', on);
+      h.textContent = on ? msg : base;
+    }
+    function submitCreateRoute() {
+      const name = document.getElementById('cr-name').value.trim();
+      if (!name) {
+        crFieldError('cr-name', 'cr-h-name', true, 'Route name is required.');
+        return;
+      }
+      crFieldError('cr-name', 'cr-h-name', false, '', 'A short, recognizable name for this route.');
+      /* Nothing persisted here — hand the route name to the add-stops
+         workspace (route-build-mode.html) via sessionStorage. */
+      sessionStorage.setItem('routeDraft', JSON.stringify({ name: name }));
+      window.location.href = 'route-map.html';
+    }
   </script>
 </body>
 </html>
