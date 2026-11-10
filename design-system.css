@@ -37,6 +37,9 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Firefox custom scrollbar (inherited by all descendants): thumb + track. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-tertiary) var(--surface-background);
 }
 
 body {
@@ -44,6 +47,33 @@ body {
   background-color: var(--surface-background);
   color: var(--text-primary);
   line-height: 1.5;
+}
+
+/* ========================================
+   SCROLLBAR — project-wide custom scrollbar, DS colors only.
+   Foundational/global so every scroll area (vertical AND horizontal) is
+   consistent. Firefox reads scrollbar-width/color from html above; WebKit
+   (Chromium/Edge/Safari) uses the ::-webkit-scrollbar pseudo-elements below.
+   ======================================== */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--surface-background);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: var(--radius-button);
+  /* 2px track-colored border insets the thumb so it reads slim (border, not spacing). */
+  border: 2px solid var(--surface-background);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+/* Where vertical + horizontal scrollbars meet. */
+*::-webkit-scrollbar-corner {
+  background: var(--surface-background);
 }
 
 /* ========================================
